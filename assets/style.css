@@ -175,15 +175,8 @@ mark {
 .acad .deg a:hover::after { color: var(--accent); }
 .acad .sub { margin: 2px 0 0; color: var(--muted); font-size: 14.5px; }
 
-/* contact / email links — muted, not the red accent */
-.sec-contact { margin: 18px 0 0; font-size: 14.5px; }
-.sec-contact a, .acad .sub a {
-  color: var(--muted);
-  text-decoration: underline;
-  text-decoration-color: var(--line);
-  text-underline-offset: 2px;
-}
-.sec-contact a:hover, .acad .sub a:hover { color: var(--accent); text-decoration-color: currentColor; }
+/* contact email — plain muted text */
+.sec-contact { margin: 18px 0 0; font-size: 14.5px; color: var(--muted); }
 
 /* ---- article ---- */
 .back { display: inline-block; font-size: 14px; color: var(--muted); margin-bottom: 28px; }

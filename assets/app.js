@@ -102,7 +102,7 @@ function renderHome() {
           </div>
         </div>
       </div>
-      <p class="sec-contact"><a href="mailto:haotian.fang@epfl.ch">haotian.fang@epfl.ch</a></p>
+      <p class="sec-contact">haotian.fang@epfl.ch</p>
     </section>
 
     <section class="section">
@@ -113,7 +113,7 @@ function renderHome() {
           <div class="body">
             <p class="deg"><a href="https://stegamatter.com" target="_blank" rel="noopener">StegaMatter</a></p>
             <p class="sub">Co-founder & COO</p>
-            <p class="sub"><a href="mailto:haotian@stegamatter.com">haotian@stegamatter.com</a></p>
+            <p class="sub">haotian@stegamatter.com</p>
           </div>
         </div>
       </div>
