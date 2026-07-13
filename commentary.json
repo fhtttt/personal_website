@@ -1,0 +1,3 @@
+{
+  "_readme": "史論 layer, kept apart from the record. Keys are post slugs; each entry pins a dated reading to a commit of posts/<slug>.md, as { \"sha\": \"<prefix>\", \"date\": \"YYYY-MM-DD\", \"note\": \"inline markdown\" }. A commit may carry any number of notes — that is the point: the same change reread at ten years' distance is a second document, not a correction of the first. Never edit an old note; add a new one."
+}
