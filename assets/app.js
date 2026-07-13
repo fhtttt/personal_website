@@ -91,14 +91,14 @@ function renderHome() {
           <div class="yrs">2020-2024</div>
           <div class="body">
             <p class="deg">Philosophy (minor in Physics), History and Philosophy of Science, Computer Science</p>
-            <p class="sub">University of Pittsburgh · advised by Paolo Palmieri and Lynne Sunderman</p>
+            <p class="sub">University of Pittsburgh · advised by Paolo Palmieri (History, Philosophy, Science) and Lynne Sunderman (Language, Writing)</p>
           </div>
         </div>
         <div class="item">
           <div class="yrs">2024-2027</div>
           <div class="body">
             <p class="deg">Digital Humanities</p>
-            <p class="sub">EPFL (School of Computer and Communication Sciences) · advised by xxx</p>
+            <p class="sub">EPFL (School of Computer and Communication Sciences) · advised by Frédéric Kaplan (Digital Humanities) and Rüdiger Urbanke (Information Theory)</p>
           </div>
         </div>
       </div>
