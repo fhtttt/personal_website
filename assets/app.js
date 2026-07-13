@@ -186,6 +186,7 @@ function renderEpigraphs() {
         </figure>`;
   return `
     <section class="section epigraphs">
+      <h2>A borrowed peep-show of the interior</h2>
       <div class="epi-col">
         ${cell(byLang("zh"))}
         ${blessing}
