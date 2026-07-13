@@ -4,7 +4,6 @@ const SITE = {
   pinyin: "Fāng Hàotiān",   // 名字上方的注音
   enName: "Haotian Fang",   // 用于浏览器标签 + 页脚
 };
-const REPO = "fhtttt/personal_website";
 
 /* fixed category order + labels (must match `category` in posts.json) */
 const CATS = ["Information Theory", "Complex System", "History of Philosophy", "Others"];
@@ -103,6 +102,7 @@ function renderHome() {
           </div>
         </div>
       </div>
+      <p class="sec-contact"><a href="mailto:haotian.fang@epfl.ch">haotian.fang@epfl.ch</a></p>
     </section>
 
     <section class="section">
@@ -113,6 +113,7 @@ function renderHome() {
           <div class="body">
             <p class="deg"><a href="https://stegamatter.com" target="_blank" rel="noopener">StegaMatter</a></p>
             <p class="sub">Co-founder & COO</p>
+            <p class="sub"><a href="mailto:haotian@stegamatter.com">haotian@stegamatter.com</a></p>
           </div>
         </div>
       </div>
@@ -132,7 +133,7 @@ function renderHome() {
 
     ${renderEpigraphs()}
 
-    <div class="footer">© <span id="yr"></span> ${esc(SITE.enName)} · <a href="https://github.com/${REPO}" target="_blank" rel="noopener">source</a></div>
+    <div class="footer">© <span id="yr"></span> ${esc(SITE.enName)}</div>
   `;
 
   document.getElementById("yr").textContent = new Date().getFullYear();
