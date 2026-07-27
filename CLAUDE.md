@@ -6,10 +6,10 @@ HTML file per post so each article has a real URL and its own `<head>` metadata.
 
 ## Commit messages: content and site are two different records
 
-The commit history of `posts/<slug>.md` is meant to be read as the post's own
-history — eventually surfaced next to the article, with the diffs and the
-commentary. That only works if content commits and site-development commits are
-distinguishable at a glance, and if the content ones carry an argument.
+The commit history of `posts/<slug>.md` *is* the post's own history, surfaced next
+to the article with its diffs and commentary (see the history panel below). That only
+works if content commits and site-development commits are distinguishable at a glance,
+and if the content ones carry an argument.
 
 **Never mix the two in one commit.** A change that touches both `posts/*.md` (or
 `posts.json` content fields) and `assets/` / `build_pages.py` / `index.html` gets
@@ -32,6 +32,12 @@ show the diff, and ask the user for the message. The subject line may be propose
 the body may not. An empty or generic body ("update wording") defeats the purpose —
 if the user hasn't supplied a why yet, wait rather than fill it in.
 
+**The body is published.** The History panel renders it verbatim on the public post
+page, so writing one is an act of publishing, not a private note to the repo. Say so
+before asking the user for a body, especially when the change is personal — the
+alternative to a public body is a dated note in `commentary.json`, or nothing.
+Commit it byte for byte, typos included; do not silently rewrap or fix punctuation.
+
 For a brand-new post: `post(<slug>): Add <Title>`, body = why this post exists.
 
 ### Site commits — Claude writes these, minimal and uniform
@@ -46,9 +52,23 @@ narrative. No co-author or generated-by trailers, ever.
 
 Examples: `site: Fix footnote links on iOS`, `site: Serve posts at /<slug>`.
 
-Commits before this convention was adopted (through `5214c3e`) are unprefixed;
-leave them alone — rewriting history to look tidier is exactly the move this
-repo is arguing against.
+## Published history is append-only from `af8e60f`
+
+On 2026-07-27 the whole history was deliberately collapsed to two commits —
+`ddbf51b` (the entire site) and `af8e60f` (the first writing of Write Your Own
+History) — to set the baseline before the practice began. That was a one-time
+re-founding, **not a precedent**. Do not rewrite, squash, amend or force-push
+anything already pushed, and do not offer to:
+
+- every `sha` in `commentary.json` is pinned to a commit, so a rewrite silently
+  orphans every note. The placeholder notes written before the collapse had to be
+  thrown away for exactly this reason — the SHAs all changed.
+- the panel's diffs are computed against the previous commit of the file, so a
+  rewritten past changes what every future diff appears to say.
+- the post itself argues against smoothing a record to look tidier.
+
+Amending a commit that has **not** been pushed is fine. `git push --force` is not,
+without the user asking for it in those terms.
 
 ## The history panel (`commentary.json`)
 
@@ -64,6 +84,8 @@ message body), a word-level diff of the markdown, and the readings attached to i
 { "<slug>": [ { "sha": "<prefix>", "date": "YYYY-MM-DD", "note": "inline markdown" } ] }
 ```
 
+- The `sha` to pin a note to comes from
+  `git log --format='%h %ad %s' --date=short -- posts/<slug>.md`.
 - A commit may carry any number of notes. **Never edit or delete an old note** —
   a rereading is a new entry with a new date, not a correction of the previous one.
   That is the whole point of the file; collapsing them would be exactly the smoothing
@@ -72,6 +94,18 @@ message body), a word-level diff of the markdown, and the readings attached to i
 - The diff renders word-by-word for edited paragraphs, and whole-paragraph
   strike/insert when a paragraph was replaced rather than edited (similarity < 0.4).
   `wordDiff()` returns `null` in that case — that is the signal, not a failure.
+- The `updated:` frontmatter line shows up as a change in every content diff. It is
+  not filtered out on purpose: it is part of the source.
+
+What the panel depends on, all of it load-bearing:
+
+- **The repo must stay public.** The panel reads the GitHub API anonymously from the
+  browser; a private repo means no history for every visitor, with no other symptom.
+- 60 requests/hour unauthenticated, so answers are cached in `sessionStorage`. A panel
+  showing stale commits after a push is that cache — `sessionStorage.clear()`, not a bug.
+- `REPO` at the top of `assets/app.js` is the hardcoded `owner/name`. Renaming the
+  GitHub repo breaks the panel silently; update it there.
+- Nothing appears until the commit is **pushed**. Local commits are invisible here.
 
 ## Layout conventions
 
@@ -186,6 +220,11 @@ remove that guard, and do not add a `hashchange` listener that re-renders.
 python3 build_pages.py && python3 -m http.server 8000
 ```
 then open http://localhost:8000 (must be served over http; opening file:// directly breaks fetch).
+
+`http.server` does **not** resolve an extensionless path to `<path>.html` the way
+GitHub Pages does, so `/write-your-own-history` 404s locally. Preview a post at
+`/write-your-own-history.html` — `route()` strips the suffix, so the page behaves
+identically. Do not "fix" the routing over this; nothing is wrong with it.
 
 ## Deploy
 
