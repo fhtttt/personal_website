@@ -102,6 +102,9 @@ function renderHome() {
       <p>A theorist who insists on interpretability</p>
       <p class="tc">一個廿一世紀的楚地巫史</p>
     </div>
+    <p class="links">
+      <a href="https://www.linkedin.com/in/haotian-fang-354933254/" target="_blank" rel="noopener">LinkedIn</a>
+    </p>
 
     <section class="section">
       <h2>La tour d’ivoire avant midi</h2>

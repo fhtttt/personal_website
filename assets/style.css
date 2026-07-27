@@ -68,6 +68,18 @@ a:hover { text-decoration: underline; }
   letter-spacing: .05em;
 }
 
+/* identity links — same underline + ↗ idiom as the venture links below */
+.links { margin: 14px 0 0; font-size: 14.5px; }
+.links a {
+  color: var(--muted);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+.links a::after { content: "\2197"; margin-left: 3px; font-size: .8em; vertical-align: 1px; }
+.links a:hover { color: var(--accent); text-decoration-color: currentColor; }
+
 /* ---- sections ---- */
 .section { margin-top: 84px; }
 .section > h2 {
