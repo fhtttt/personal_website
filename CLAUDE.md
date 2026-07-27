@@ -226,6 +226,13 @@ GitHub Pages does, so `/write-your-own-history` 404s locally. Preview a post at
 `/write-your-own-history.html` — `route()` strips the suffix, so the page behaves
 identically. Do not "fix" the routing over this; nothing is wrong with it.
 
+## Preview locally, then ask — every time
+
+The order is fixed: make the change → `build_pages.py` + serve it → **show the user the
+result** → ask whether to commit → ask whether to push. Never fold committing into
+making a change, and never push straight after committing on one go-ahead. This applies
+to `site:` commits and one-line CSS tweaks too, not only to content.
+
 ## Deploy
 
 Run `python3 build_pages.py` first, then push to `main`; GitHub Pages (Settings → Pages → Source = `main` / root) serves it.
