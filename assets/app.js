@@ -44,7 +44,7 @@ const REPO = "fhtttt/personal_website";
 const app = document.getElementById("app");
 const PAGE_SIZE = 10;
 const state = {
-  posts: [], query: "", cat: "all", page: 0, bodies: {}, bodiesLoaded: false,
+  posts: [], query: "", cat: "all", page: 0, bodies: {}, excerpts: {}, bodiesLoaded: false,
   commentary: null, hist: null,
 };
 
@@ -184,7 +184,8 @@ async function ensureBodies() {
       const res = await fetch("/" + p.file);
       if (!res.ok) return;
       const { body } = parseFrontmatter(await res.text());
-      state.bodies[p.slug] = toPlain(body);   // 原文大小写、去 markdown、便于片段展示
+      state.bodies[p.slug] = toPlain(body);        // 全文，用于搜索匹配
+      state.excerpts[p.slug] = toPlain(leadText(body));   // 首页摘要只要正文本身
     } catch (e) {}
   }));
   if (document.getElementById("list")) renderList();
@@ -266,9 +267,31 @@ function renderList() {
   );
 }
 
+/* a post usually opens with an epigraph; the list should show what the post itself
+   says, so skip leading quotes/headings/rules/images and start at the first prose
+   paragraph. Headings and rules are dropped throughout; the rest is joined until
+   there is comfortably more than one excerpt's worth of text. */
+function leadText(md) {
+  const blocks = md.replace(/```[\s\S]*?```/g, "").split(/\n\s*\n/);
+  const skip = t => {
+    const c = t.charAt(0);
+    return c === ">" || c === "!" || c === "|";        // quote, image, table
+  };
+  const drop = t => t.charAt(0) === "#" || /^([-*_])\s*\1\s*\1/.test(t);  // heading, rule
+  const out = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const t = blocks[i].trim();
+    if (!t || drop(t)) continue;
+    if (!out.length && skip(t)) continue;
+    out.push(t);
+    if (out.join(" ").length > 200) break;
+  }
+  return out.join(" ");
+}
+
 /* first ~120 chars of the article body (falls back to summary before bodies load) */
 function excerpt(p) {
-  const src = state.bodies[p.slug] || p.summary || "";
+  const src = state.excerpts[p.slug] || p.summary || "";
   if (!src) return "";
   const n = 120;
   if (src.length <= n) return esc(src);
