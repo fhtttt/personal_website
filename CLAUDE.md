@@ -127,6 +127,10 @@ What the panel depends on, all of it load-bearing:
 
 ## The learning map
 
+**The procedure for adding, linking and removing a note is in
+[`LEARNING-MAP.md`](./LEARNING-MAP.md). Follow it; do not improvise one.** What is
+here is only what would otherwise get re-broken.
+
 One post is an index rather than an essay. `/learning-map` renders its prose and
 then a searchable graph of **atomic notes** — one idea each, a video at the top and
 the user's hand-typed transcript below it.
@@ -140,7 +144,8 @@ the user's hand-typed transcript below it.
 - Every field in a node record must match the note's frontmatter (`tags` is an array
   here, a comma-separated string there). `build_pages.py` prints a warning on drift
   and refuses to build on a broken slug, a missing file, or an edge naming a node
-  that is not in `nodes`.
+  that is not in `nodes`. An edge-only edit regenerates no HTML, so `git status` gives
+  no reminder that the build was never run — run it anyway.
 
 **An edge is a claim of the map, not of the prose.** A note may link to another note
 in its text (`[Comparing infinities](/learning/infinity-comparison)`) and that is just
