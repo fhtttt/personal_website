@@ -1,0 +1,5 @@
+{
+  "_readme": "The Learning Map. `nodes` are atomic notes under posts/learning/ — deliberately NOT in posts.json, so they never appear in the home list or the site-wide search; they are reachable only through /learning-map and through each other. `edges` are the map's own claim about how they connect ({from, to}, read as 'leads to'); they are what the graph on /learning-map draws. Every commit that touches this file or posts/learning-map.md is an automatic `map:` commit — adding a node, linking two nodes, removing one — because the index is a structure, not an argument. The notes themselves keep the ordinary `post(learning/<slug>): …` rule, body written by hand. Full procedure: LEARNING-MAP.md.",
+  "nodes": [],
+  "edges": []
+}

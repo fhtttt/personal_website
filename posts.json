@@ -1,5 +1,19 @@
 [
   {
+    "slug": "learning-map",
+    "file": "posts/learning-map.md",
+    "title": "Learning Map",
+    "category": "Others",
+    "created": "2026-07-31",
+    "updated": "2026-07-31",
+    "summary": "",
+    "tags": [
+      "learning",
+      "index",
+      "notes"
+    ]
+  },
+  {
     "slug": "write-your-own-history",
     "file": "posts/write-your-own-history.md",
     "title": "Write Your Own History",
