@@ -95,7 +95,7 @@ a:hover { text-decoration: underline; }
 
 /* ---- controls ---- */
 .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px; }
-#search {
+#search, #map-search {
   flex: 1 1 180px;
   min-width: 140px;
   padding: 7px 11px;
@@ -106,7 +106,7 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--line);
   border-radius: 7px;
 }
-#search:focus { outline: none; border-color: var(--muted); }
+#search:focus, #map-search:focus { outline: none; border-color: var(--muted); }
 .cats { display: flex; flex-wrap: wrap; gap: 6px; }
 .cat {
   padding: 4px 10px;
@@ -236,6 +236,91 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
 .prose .footnotes li:target { color: var(--fg); }
 .prose .fnback { text-decoration: none; margin-left: 4px; }
 
+/* ---- the learning map ----
+   Lives inside the /learning-map article, below its prose: one search box over the
+   notes and a layered graph of them. The nodes are laid out by ordinary flex rows;
+   the curves between them are drawn by app.js into an absolutely-positioned SVG
+   from the boxes the browser measured, which is why nothing here fixes a size. */
+.mapsec { max-width: 46rem; }
+.map-count { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.map-list:not(:empty) { margin-bottom: 34px; }
+
+/* A layer that wrapped onto two rows would put a node in the middle of somebody
+   else's edge, which reads as a link that is not there. So a layer never wraps: the
+   track scrolls sideways instead, and the graph keeps one honest geometry at every
+   width. min-width: max-content lets it grow past the track and centre when it fits. */
+.graph-wrap { overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; }
+/* The spacing here is margins, not flexbox `gap`, on purpose: app.js measures the laid
+   out boxes to draw the edges between them, so this spacing is geometry, not breathing
+   room. Flex gap is unsupported on Safari 14.0–14.4 — where `gap` silently collapses,
+   layers would touch and every arrow would be drawn through a node's text. */
+.graph {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: -webkit-max-content;
+  min-width: max-content;
+  padding: 6px 0 2px;
+}
+.glayer + .glayer { margin-top: 60px; }
+.gedges {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.gedge { fill: none; stroke: var(--muted); stroke-width: 1.4px; opacity: .72; }
+.gedge.dim { opacity: .12; }
+.gedges marker path { fill: var(--muted); opacity: .72; }
+
+.glayer { display: flex; flex-wrap: nowrap; justify-content: center; }
+.gnode + .gnode { margin-left: 20px; }
+.gnode {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 210px;
+  max-width: 100%;
+  padding: 12px 14px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.gnode:hover { text-decoration: none; border-color: var(--accent); }
+.gnode:hover .gtitle { color: var(--accent); }
+.gtitle { font-size: 15px; line-height: 1.4; }
+.gsum {
+  font-size: 12.5px; line-height: 1.5; color: var(--muted);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.graph.filtering .gnode { opacity: .26; }
+.graph.filtering .gnode.hit { opacity: 1; border-color: var(--muted); }
+
+/* a note's own edges, read from the map rather than from its prose */
+.conns {
+  margin-top: 64px; padding-top: 18px;
+  border-top: 1px solid var(--line);
+  display: flex; flex-wrap: wrap; gap: 20px 44px;
+  max-width: 46rem;
+}
+.conn-block { flex: 1 1 240px; min-width: 0; }
+.conn-block h3 {
+  font-size: 11.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 12px;
+}
+.conn-block ul { list-style: none; margin: 0; padding: 0; }
+.conn-block li { margin: 0 0 14px; }
+.conn-block li:last-child { margin-bottom: 0; }
+.conn-block a { font-size: 15px; }
+.conn-out a::after { content: "\2192"; margin-left: 5px; font-size: .9em; }
+.conn-in a::before { content: "\2190"; margin-right: 5px; font-size: .9em; }
+.conn-sum { display: block; font-size: 12.5px; line-height: 1.55; color: var(--muted); margin-top: 2px; }
+
+.post-meta .kicker { text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
+
 /* ---- history rail: the post's own git record, beside the post ----
    Narrow screens read top to bottom: article, revision list, opened revision.
    Wide screens put the list in a sticky right-hand rail and the opened
@@ -266,6 +351,7 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
 .rev-badge { display: inline-block; margin-top: 3px; font-size: 11.5px; color: var(--muted); }
 .rev-badge::before { content: "\25CF"; margin-right: 5px; font-size: .8em; color: var(--accent); vertical-align: 1px; }
 .rail-more { display: inline-block; margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+.rail-more + .rail-more { margin-left: 16px; }   /* the map's record spans two files */
 .rail-more::after { content: "\2197"; margin-left: 3px; font-size: .85em; }
 .rail-more:hover { color: var(--accent); }
 
@@ -308,6 +394,15 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
 /* word-level diff of the markdown source */
 .diff { font-size: 14.5px; line-height: 1.8; }
 .diff .dline { margin: 0 0 14px; overflow-wrap: anywhere; }
+/* one commit can change more than one of a page's files (the map's prose and its
+   manifest); name each, and read the manifest as structure rather than as prose */
+.diff-file {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px; color: var(--muted); margin: 18px 0 8px;
+}
+.rev-block > .diff-file:first-child { margin-top: 0; }
+.diff.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.7; }
+.diff.mono .dline { margin: 0 0 4px; white-space: pre-wrap; }
 .diff del {
   text-decoration: line-through;
   text-decoration-color: rgba(160, 60, 60, .55);
@@ -429,4 +524,10 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
   .acad .yrs { width: 78px; font-size: 14px; }
   .note { flex-direction: column; gap: 2px; }
   .note-date { width: auto; padding-top: 0; }
+  /* narrower cards so a two-node layer still fits without sideways scrolling */
+  .gnode { width: 152px; padding: 10px 11px; }
+  .gnode + .gnode { margin-left: 14px; }
+  .gtitle { font-size: 14px; }
+  .gsum { font-size: 12px; -webkit-line-clamp: 2; }
+  .glayer + .glayer { margin-top: 48px; }
 }

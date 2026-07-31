@@ -41,26 +41,85 @@ const QUOTES = [
 /* the record lives in git; this is where it is read from */
 const REPO = "fhtttt/personal_website";
 
+/* ---- the learning map ----
+   One post (`/learning-map`) is an index rather than an essay: its body is followed by
+   a searchable graph of atomic notes. The notes live in their own manifest, NOT in
+   posts.json — that is the whole reason they never show up in the home list or the
+   site-wide search. They are served from /learning/<slug>. */
+const MAP_SLUG = "learning-map";
+const MAP_FILE = "learning.json";
+const NOTE_DIR = "learning";
+
+/* Every lookup table below is keyed by a slug, and a slug is whatever is written in
+   posts.json or learning.json. `{}` answers `t["constructor"]` with an inherited
+   function even when nothing was ever stored there, which turns a plausible slug into
+   a crash or a phantom match. A prototype-less object answers only what was put in it. */
+function bare() { return Object.create(null); }
+
 const app = document.getElementById("app");
 const PAGE_SIZE = 10;
 const state = {
-  posts: [], query: "", cat: "all", page: 0, bodies: {}, excerpts: {}, bodiesLoaded: false,
+  posts: [], query: "", cat: "all", page: 0, bodies: bare(), excerpts: bare(), bodiesLoaded: false,
   commentary: null, hist: null,
+  map: { nodes: [], edges: [] },
+  mapQuery: "", mapBodies: bare(), mapExcerpts: bare(), mapBodiesLoaded: false, mapHits: null,
 };
 
 boot();
 
 async function boot() {
-  try {
-    const res = await fetch("/posts.json", { cache: "no-cache" });
-    state.posts = await res.json();
-  } catch (e) {
-    state.posts = [];
-  }
+  const [posts, map] = await Promise.all([
+    fetchJSON("/posts.json"),
+    fetchJSON("/" + MAP_FILE),
+  ]);
+  state.posts = Array.isArray(posts) ? posts : [];
+  state.map = normalizeMap(map);
   window.addEventListener("popstate", route);
   document.addEventListener("click", onNavClick);
+  /* the graph's edges are drawn from measured node boxes, so they have to be
+     redrawn whenever the boxes move — reflow on resize, and again once the
+     webfonts land and change every text metric on the page */
+  window.addEventListener("resize", scheduleEdges);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleEdges);
   route();
 }
+
+async function fetchJSON(url) {
+  try {
+    const res = await fetch(url, { cache: "no-cache" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) { return null; }
+}
+
+/* tolerate a missing or half-written manifest: an absent map must degrade to an
+   empty graph, never to a page that fails to render */
+function normalizeMap(m) {
+  const nodes = m && Array.isArray(m.nodes) ? m.nodes.filter(n => n && n.slug) : [];
+  const known = bare(), once = bare();
+  nodes.forEach(n => { known[n.slug] = true; });
+  /* `=== true`, not a truthiness test: a plain object answers `known["toString"]` with
+     an inherited function, and a typo like that would sail through as a real node */
+  const edges = m && Array.isArray(m.edges) ? m.edges.filter(e => {
+    if (!e || known[e.from] !== true || known[e.to] !== true || e.from === e.to) return false;
+    const k = e.from + ">" + e.to;
+    if (once[k] === true) return false;          // the same relation stated twice
+    once[k] = true;
+    return true;
+  }) : [];
+  return { nodes, edges };
+}
+
+function mapNode(slug) {
+  const ns = state.map.nodes;
+  for (let i = 0; i < ns.length; i++) if (ns[i].slug === slug) return ns[i];
+  return null;
+}
+function noteFile(slug) {
+  const n = mapNode(slug);
+  return n && n.file ? n.file : "posts/" + NOTE_DIR + "/" + slug + ".md";
+}
+function noteHref(slug) { return "/" + NOTE_DIR + "/" + encodeURIComponent(slug); }
 
 /* clean URLs: /<slug> is served from the generated <slug>.html, so it is a real
    200 — refresh-safe, crawlable, no trailing slash. ?post=<slug> still resolves,
@@ -71,21 +130,54 @@ async function boot() {
 let rendered = null;
 function route() {
   const path = location.pathname.replace(/^\/+|\/+$/g, "").replace(/\.html$/, "");
-  const slug = new URLSearchParams(location.search).get("post")
+  const qs = new URLSearchParams(location.search);
+  /* /learning/<slug> — one level of nesting, and only this one */
+  const inDir = path.indexOf(NOTE_DIR + "/") === 0 ? path.slice(NOTE_DIR.length + 1) : "";
+  const note = qs.get("note") || (inDir && !inDir.includes("/") ? decodeURIComponent(inDir) : "");
+  const slug = qs.get("post")
     || (path && !path.includes("/") ? decodeURIComponent(path) : "");
   const key = location.pathname + location.search;
   if (key === rendered) return;
   rendered = key;
-  if (slug) renderPost(slug);
+  if (note) renderNote(note);
+  else if (slug) renderPost(slug);
   else renderHome();
   window.scrollTo(0, 0);
 }
 function go(url) { history.pushState(null, "", url); route(); }
 function onNavClick(e) {
+  /* cmd/ctrl/shift/alt-click and middle-click are the reader asking for a new tab or
+     window; taking them over navigates this one instead and loses their place. Checked
+     first, so it holds for the app's own links too, not only for links found in prose. */
+  if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   const a = e.target.closest("a");
-  if (!a) return;
-  if ("post" in a.dataset) { e.preventDefault(); go("/" + encodeURIComponent(a.dataset.post)); }
-  else if ("home" in a.dataset) { e.preventDefault(); go("/"); }
+  if (!a || a.target || a.hasAttribute("download")) return;
+  if ("post" in a.dataset) { e.preventDefault(); go("/" + encodeURIComponent(a.dataset.post)); return; }
+  if ("note" in a.dataset) { e.preventDefault(); go(noteHref(a.dataset.note)); return; }
+  if ("home" in a.dataset) { e.preventDefault(); go("/"); return; }
+  /* a note's prose links to other notes as plain markdown — [x](/learning/y). Take
+     those over, but only those: a link this router cannot resolve must stay the
+     browser's, or it turns into "Post not found" at a URL the server would have served. */
+  const href = a.getAttribute("href") || "";
+  if (href.charAt(0) !== "/" || href.charAt(1) === "/") return;
+  if (href.indexOf("#") >= 0) return;                    // let anchors scroll natively
+  if (href === location.pathname + location.search) return;   // a link to this very page
+  if (!routable(href)) return;
+  e.preventDefault();
+  go(href);
+}
+
+/* the three shapes route() understands: home, a listed post, a note of the map */
+function routable(href) {
+  const path = href.split("?")[0].replace(/^\/+|\/+$/g, "").replace(/\.html$/, "");
+  if (!path) return true;
+  if (path.indexOf(NOTE_DIR + "/") === 0) {
+    const s = path.slice(NOTE_DIR.length + 1);
+    return !!s && !s.includes("/");
+  }
+  if (path.includes("/")) return false;
+  const slug = decodeURIComponent(path);
+  return state.posts.some(p => p.slug === slug);
 }
 
 /* ---------- home ---------- */
@@ -290,8 +382,8 @@ function leadText(md) {
 }
 
 /* first ~120 chars of the article body (falls back to summary before bodies load) */
-function excerpt(p) {
-  const src = state.excerpts[p.slug] || p.summary || "";
+function excerpt(p, store) {
+  const src = (store || state.excerpts)[p.slug] || p.summary || "";
   if (!src) return "";
   const n = 120;
   if (src.length <= n) return esc(src);
@@ -308,6 +400,10 @@ function toPlain(md) {
     .replace(/^\s{0,3}#{1,6}\s+/gm, "")          // headings
     .replace(/[>*_~#`]/g, " ")                   // leftover md punctuation
     .replace(/\$\$?([^$]*)\$\$?/g, "$1")         // math delimiters, keep content
+    // …then drop the TeX control words the math left behind: a transcript is mostly
+    // formulae, and a snippet reading "x 1, x 2, \dots" helps nobody
+    .replace(/\\[a-zA-Z]+/g, " ")
+    .replace(/[{}\\]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -321,9 +417,9 @@ function hl(text, q) {
 }
 
 /* a highlighted window of context around the first match (body, else summary) */
-function buildSnippet(p, q) {
+function buildSnippet(p, q, store) {
   const ql = q.toLowerCase();
-  let src = state.bodies[p.slug] || "";
+  let src = (store || state.bodies)[p.slug] || "";
   let i = src.toLowerCase().indexOf(ql);
   if (i < 0) { src = p.summary || ""; i = src.toLowerCase().indexOf(ql); }
   if (i < 0) return "";                            // match was only in title/tags
@@ -347,6 +443,7 @@ function filtered() {
 
 /* ---------- article ---------- */
 async function renderPost(slug) {
+  const at = rendered;                  // the page this render belongs to
   const post = state.posts.find(p => p.slug === slug);
   const file = post ? post.file : `posts/${slug}.md`;
   let raw = "";
@@ -354,6 +451,7 @@ async function renderPost(slug) {
     const res = await fetch("/" + file, { cache: "no-cache" });
     if (res.ok) raw = await res.text();
   } catch (e) {}
+  if (at !== rendered) return;          // navigated away while the markdown loaded
 
   document.body.classList.add("post");
 
@@ -367,6 +465,7 @@ async function renderPost(slug) {
   const created = meta.created || (post && post.created) || "";
   const updated = meta.updated || (post && post.updated) || "";
   const cat = meta.category || (post && post.category) || "";
+  const isMap = slug === MAP_SLUG;
   document.title = title;
 
   app.innerHTML = `
@@ -380,6 +479,7 @@ async function renderPost(slug) {
           ${cat ? ` · ${esc(cat)}` : ""}
         </div>
         <div class="prose">${renderMarkdown(body)}</div>
+        ${isMap ? mapShell() : ""}
       </article>
       <aside class="rail">
         <h2>History</h2>
@@ -390,7 +490,375 @@ async function renderPost(slug) {
     <div class="footer"><a data-home href="/">← All posts</a></div>
   `;
 
-  renderHistory(slug, file);
+  if (isMap) initMap();
+  /* the index is two files — the prose and the manifest the graph is drawn from —
+     and both belong to its record, so the rail merges the commits of each */
+  renderHistory(slug, isMap ? [file, MAP_FILE] : [file]);
+}
+
+/* ---------- a note of the learning map ---------- */
+async function renderNote(slug) {
+  const at = rendered;
+  const node = mapNode(slug);
+  const file = noteFile(slug);
+  let raw = "";
+  try {
+    const res = await fetch("/" + file, { cache: "no-cache" });
+    if (res.ok) raw = await res.text();
+  } catch (e) {}
+  if (at !== rendered) return;
+
+  document.body.classList.add("post");
+
+  const back = `<a class="back" data-post="${MAP_SLUG}" href="/${MAP_SLUG}">← Learning Map</a>`;
+  if (!raw) {
+    app.innerHTML = back + `<p class="empty">Note not found.</p>`;
+    return;
+  }
+
+  const { meta, body } = parseFrontmatter(raw);
+  const title = (node && node.title) || meta.title || slug;
+  const created = meta.created || (node && node.created) || "";
+  const updated = meta.updated || (node && node.updated) || "";
+  document.title = title;
+
+  app.innerHTML = `
+    ${back}
+    <div class="post-wrap">
+      <article>
+        <h1>${esc(title)}</h1>
+        <div class="post-meta">
+          <span class="kicker">Learning Map</span>
+          ${created ? ` · <span>${esc(created)}</span>` : ""}
+          ${updated && updated !== created ? ` · updated ${esc(updated)}` : ""}
+        </div>
+        <div class="prose">${renderMarkdown(body)}</div>
+        ${connections(slug)}
+      </article>
+      <aside class="rail">
+        <h2>History</h2>
+        <div id="rail-body" class="rail-body"><p class="empty">Loading…</p></div>
+      </aside>
+      <div id="rev-detail" class="rev-detail"></div>
+    </div>
+    <div class="footer"><a data-post="${MAP_SLUG}" href="/${MAP_SLUG}">← Learning Map</a></div>
+  `;
+
+  /* a note keeps its own record, on the ordinary rules; its readings are keyed
+     `learning/<slug>` in commentary.json so they cannot collide with a post's */
+  renderHistory(NOTE_DIR + "/" + slug, [file]);
+}
+
+/* the edges of the map, seen from one node: what it opens onto, and what opened
+   onto it. Drawn from learning.json, not from the links in the prose. */
+function connections(slug) {
+  const out = state.map.edges.filter(e => e.from === slug).map(e => e.to);
+  const back = state.map.edges.filter(e => e.to === slug).map(e => e.from);
+  if (!out.length && !back.length) return "";
+  const link = s => {
+    const n = mapNode(s);
+    return `<li><a data-note="${esc(s)}" href="${noteHref(s)}">${esc(n && n.title ? n.title : s)}</a>${
+      n && n.summary ? `<span class="conn-sum">${esc(n.summary)}</span>` : ""}</li>`;
+  };
+  const block = (label, arr, cls) => arr.length
+    ? `<div class="conn-block ${cls}"><h3>${label}</h3><ul>${arr.map(link).join("")}</ul></div>` : "";
+  return `<section class="conns">
+    ${block("Leads to", out, "conn-out")}
+    ${block("Reached from", back, "conn-in")}
+  </section>`;
+}
+
+/* ---------- the map itself: one search box over the notes, one graph ----------
+   The same search the home page runs, pointed at a different corpus. An empty
+   query shows the graph alone; a query puts the matching notes above it and dims
+   every node the query does not reach, so the two views answer together. */
+function mapShell() {
+  const n = state.map.nodes.length;
+  return `
+    <section class="section mapsec">
+      <h2>The map</h2>
+      <div class="controls">
+        <input id="map-search" type="search" placeholder="Search the notes…" value="${esc(state.mapQuery)}" autocomplete="off">
+        <span class="map-count" id="map-count">${n} note${n === 1 ? "" : "s"}</span>
+      </div>
+      <div id="map-list" class="map-list"></div>
+      <div class="graph-wrap"><div id="graph" class="graph"><div class="gedges"></div></div></div>
+    </section>`;
+}
+
+function initMap() {
+  /* the query survives navigation, the same way the home page's does — mapShell()
+     has already put it back in the box, so clearing it here would desync the two */
+  renderGraph();
+  const s = document.getElementById("map-search");
+  if (s) s.addEventListener("input", e => { state.mapQuery = e.target.value; renderMapList(); });
+  renderMapList();
+  ensureMapBodies();
+}
+
+/* same idea as ensureBodies(), against learning.json instead of posts.json */
+async function ensureMapBodies() {
+  if (state.mapBodiesLoaded) return;
+  state.mapBodiesLoaded = true;
+  await Promise.all(state.map.nodes.map(async n => {
+    try {
+      const res = await fetch("/" + (n.file || noteFile(n.slug)));
+      if (!res.ok) return;
+      const { body } = parseFrontmatter(await res.text());
+      state.mapBodies[n.slug] = toPlain(body);
+      state.mapExcerpts[n.slug] = toPlain(leadText(body));
+    } catch (e) {}
+  }));
+  if (document.getElementById("map-list")) renderMapList();
+}
+
+function mapMatches() {
+  const q = state.mapQuery.trim().toLowerCase();
+  return state.map.nodes.filter(n => {
+    if (!q) return true;
+    const tags = Array.isArray(n.tags) ? n.tags.join(" ") : (n.tags || "");
+    const hay = `${n.title || ""} ${n.summary || ""} ${tags} ${state.mapBodies[n.slug] || ""}`.toLowerCase();
+    return hay.includes(q);
+  });
+}
+
+function renderMapList() {
+  const list = document.getElementById("map-list");
+  if (!list) return;
+  const q = state.mapQuery.trim();
+  const hits = mapMatches();
+  const total = state.map.nodes.length;
+  const count = document.getElementById("map-count");
+  if (count) count.textContent = q
+    ? `${hits.length} of ${total}`
+    : `${total} note${total === 1 ? "" : "s"}`;
+
+  if (!q) {
+    list.innerHTML = "";
+    highlightGraph(null);
+    return;
+  }
+  if (!hits.length) {
+    list.innerHTML = `<p class="empty">No note matches “${esc(q)}”.</p>`;
+    highlightGraph({});
+    return;
+  }
+  const rows = hits.map(n => {
+    const preview = buildSnippet(n, q, state.mapBodies) || excerpt(n, state.mapExcerpts);
+    return `<li><a class="row" data-note="${esc(n.slug)}" href="${noteHref(n.slug)}">
+      <span class="date">${esc(n.created || "")}</span>
+      <span class="rowmain">
+        <span class="title">${hl(n.title || n.slug, q)}</span>
+        ${preview ? `<span class="snippet">${preview}</span>` : ""}
+      </span>
+    </a></li>`;
+  }).join("");
+  list.innerHTML = `<ul class="list">${rows}</ul>`;
+
+  const set = bare();
+  hits.forEach(n => { set[n.slug] = true; });
+  highlightGraph(set);
+}
+
+function highlightGraph(set) {
+  const box = document.getElementById("graph");
+  if (!box) return;
+  box.classList.toggle("filtering", !!set);
+  box.querySelectorAll(".gnode").forEach(el =>
+    el.classList.toggle("hit", !set || !!set[el.getAttribute("data-note")])
+  );
+  state.mapHits = set;
+  drawEdges();
+}
+
+/* layered layout: layer = longest path from a root, so an edge always points
+   downward; order inside a layer is settled by a few barycentre sweeps, which is
+   enough to keep the lines from crossing on a map of this size. */
+function graphLayers() {
+  const nodes = state.map.nodes, edges = state.map.edges;
+  const idx = bare();
+  nodes.forEach((n, i) => { idx[n.slug] = i; });
+  const all = [];
+  edges.forEach(e => {
+    const a = idx[e.from], b = idx[e.to];
+    if (typeof a !== "number" || typeof b !== "number") return;   // never an inherited key
+    all.push([a, b]);
+  });
+
+  /* "A leads to B" and "B leads back to A" are both fair things to say about two
+     notes, but a cycle has no longest path. Find the edges that close one — a DFS
+     edge landing on a node still on the stack — and layer without them. They are
+     still drawn; they just point back up. */
+  const mark = nodes.map(() => 0);              // 0 unseen · 1 on the stack · 2 done
+  const adj = nodes.map(() => []);
+  all.forEach(p => adj[p[0]].push(p[1]));
+  const back = bare();
+  const walk = i => {
+    mark[i] = 1;
+    adj[i].forEach(j => {
+      if (mark[j] === 1) back[i + ">" + j] = true;
+      else if (mark[j] === 0) walk(j);
+    });
+    mark[i] = 2;
+  };
+  for (let i = 0; i < nodes.length; i++) if (!mark[i]) walk(i);
+
+  const outs = nodes.map(() => []), ins = nodes.map(() => []), deg = nodes.map(() => 0);
+  all.forEach(p => {
+    if (back[p[0] + ">" + p[1]]) return;
+    outs[p[0]].push(p[1]); ins[p[1]].push(p[0]); deg[p[1]]++;
+  });
+
+  const layer = nodes.map(() => 0);
+  let q = [];
+  for (let i = 0; i < nodes.length; i++) if (!deg[i]) q.push(i);
+  while (q.length) {
+    const next = [];
+    q.forEach(i => {
+      outs[i].forEach(j => {
+        if (layer[j] < layer[i] + 1) layer[j] = layer[i] + 1;
+        if (--deg[j] === 0) next.push(j);
+      });
+    });
+    q = next;
+  }
+
+  let maxL = 0;
+  layer.forEach(l => { if (l > maxL) maxL = l; });
+  const layers = [];
+  for (let l = 0; l <= maxL; l++) layers.push([]);
+  nodes.forEach((n, i) => layers[layer[i]].push(i));
+
+  const pos = nodes.map(() => 0);
+  const settle = () => layers.forEach(L => L.forEach((i, k) => { pos[i] = k; }));
+  const bary = (nb, self) => {
+    if (!nb.length) return self;
+    let s = 0;
+    nb.forEach(j => { s += pos[j]; });
+    return s / nb.length;
+  };
+  settle();
+  for (let sweep = 0; sweep < 4; sweep++) {
+    for (let l = 1; l < layers.length; l++) {
+      layers[l].sort((a, b) => bary(ins[a], pos[a]) - bary(ins[b], pos[b]));
+      settle();
+    }
+    for (let l = layers.length - 2; l >= 0; l--) {
+      layers[l].sort((a, b) => bary(outs[a], pos[a]) - bary(outs[b], pos[b]));
+      settle();
+    }
+  }
+  return layers.map(L => L.map(i => nodes[i]));
+}
+
+function renderGraph() {
+  const box = document.getElementById("graph");
+  if (!box) return;
+  if (!state.map.nodes.length) {
+    box.innerHTML = `<p class="empty">The map is empty.</p>`;
+    return;
+  }
+  const layers = graphLayers();
+  const cell = n => `
+    <a class="gnode hit" data-note="${esc(n.slug)}" href="${noteHref(n.slug)}">
+      <span class="gtitle">${esc(n.title || n.slug)}</span>
+      ${n.summary ? `<span class="gsum">${esc(n.summary)}</span>` : ""}
+    </a>`;
+  box.innerHTML = `<div class="gedges"></div>` +
+    layers.filter(L => L.length)
+          .map(L => `<div class="glayer">${L.map(cell).join("")}</div>`).join("");
+  scheduleEdges();
+}
+
+/* Edges are drawn from the boxes the browser actually laid out, not from a
+   geometry computed here — that way the graph stays responsive and the curves
+   keep meeting the nodes after a resize or a late webfont. */
+let edgeTimer = null;
+function scheduleEdges() {
+  if (edgeTimer) clearTimeout(edgeTimer);
+  edgeTimer = setTimeout(() => { edgeTimer = null; drawEdges(); }, 60);
+}
+
+function drawEdges() {
+  const box = document.getElementById("graph");
+  if (!box) return;
+  const layer = box.querySelector(".gedges");
+  if (!layer) return;
+  const at = bare();
+  box.querySelectorAll(".gnode").forEach(el => {
+    at[el.getAttribute("data-note")] = {
+      slug: el.getAttribute("data-note"),
+      x: el.offsetLeft + el.offsetWidth / 2,
+      w: el.offsetWidth,
+      left: el.offsetLeft,
+      right: el.offsetLeft + el.offsetWidth,
+      top: el.offsetTop,
+      mid: el.offsetTop + el.offsetHeight / 2,
+      bottom: el.offsetTop + el.offsetHeight,
+    };
+  });
+  const hits = state.mapHits;
+  const geo = state.map.edges.filter(e => at[e.from] && at[e.to]).map(e => {
+    const a = at[e.from], b = at[e.to];
+    const down = b.top >= a.bottom, up = b.bottom <= a.top;
+    return { e: e, a: a, b: b, down: down, row: !down && !up };
+  });
+
+  /* Several arrows can want the same point: two notes pointing at a third one, or a
+     mutual pair whose two directions both run down the same corridor. Bucket by the
+     *side of the node* an arrow attaches to — not by direction — and spread each
+     bucket along that side, ordered by where its other end sits. */
+  const other = (g, node) => (g.a === node ? g.b : g.a);
+  const bucket = bare();
+  const put = (node, side, g) => {
+    const k = node.slug + "#" + side;
+    if (!bucket[k]) bucket[k] = { node: node, list: [] };
+    bucket[k].list.push(g);
+  };
+  geo.forEach(g => {
+    if (g.row) return;
+    put(g.a, g.down ? "b" : "t", g);
+    put(g.b, g.down ? "t" : "b", g);
+  });
+  Object.keys(bucket).forEach(k => {
+    const node = bucket[k].node;
+    bucket[k].list.sort((p, q) => other(p, node).x - other(q, node).x);
+  });
+  const fan = (node, side, g) => {
+    const b = bucket[node.slug + "#" + side];
+    const n = b ? b.list.length : 1;
+    if (n < 2) return node.x;
+    const w = Math.min(node.w * 0.6, 30 * (n - 1));
+    return node.x - w / 2 + w * (b.list.indexOf(g) / (n - 1));
+  };
+
+  const W = box.clientWidth, H = box.clientHeight;
+  const paths = geo.map(g => {
+    const a = g.a, b = g.b, e = g.e;
+    const on = !hits || (hits[e.from] && hits[e.to]);
+    const draw = d => `<path class="gedge${on ? "" : " dim"}" d="${d}" marker-end="url(#garrow)"/>`;
+
+    /* two notes on the same row — siblings that reference each other — get a horizontal
+       arrow between their facing sides; a vertical curve between boxes at the same
+       height would leave the drawing area and come back through the text */
+    if (g.row) {
+      const l2r = a.x <= b.x, d = l2r ? 1 : -1;
+      const x1 = l2r ? a.right : a.left, x2 = l2r ? b.left : b.right;
+      const k = Math.max(14, Math.abs(x2 - x1) * 0.4);
+      return draw(`M ${x1} ${a.mid} C ${x1 + d * k} ${a.mid} ${x2 - d * k} ${b.mid} ${x2} ${b.mid}`);
+    }
+
+    const x1 = fan(a, g.down ? "b" : "t", g), x2 = fan(b, g.down ? "t" : "b", g);
+    const y1 = g.down ? a.bottom : a.top;                 // a back edge leaves the top
+    const y2 = g.down ? b.top : b.bottom;
+    const s = g.down ? 1 : -1;
+    const k = Math.max(22, Math.abs(y2 - y1) * 0.45);
+    return draw(`M ${x1} ${y1} C ${x1} ${y1 + s * k} ${x2} ${y2 - s * k} ${x2} ${y2}`);
+  }).join("");
+  layer.innerHTML = `<svg width="${W}" height="${H}" aria-hidden="true" focusable="false">
+    <defs><marker id="garrow" viewBox="0 0 10 10" refX="10" refY="5"
+      markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M 0 1.2 L 10 5 L 0 8.8 z"/></marker></defs>${paths}</svg>`;
 }
 
 /* ---------- history: git is the record, commentary.json is the reading ----------
@@ -399,38 +867,46 @@ async function renderPost(slug) {
    repo and are dated, so a commit can accumulate several readings over years.
    Only commits touching posts/<slug>.md are queried, which is why site-development
    commits never show up here. */
-async function renderHistory(slug, file) {
+async function renderHistory(slug, files) {
   const body = document.getElementById("rail-body");
   const at = rendered;
-  const fallback = `<p class="empty">History unavailable — <a href="https://github.com/${REPO}/commits/main/${file}" target="_blank" rel="noopener">read it on GitHub</a>.</p>`;
+  const logs = files.map(f => `https://github.com/${REPO}/commits/main/${f}`);
+  const fallback = `<p class="empty">History unavailable — <a href="${logs[0]}" target="_blank" rel="noopener">read it on GitHub</a>.</p>`;
 
-  let commits, notes;
-  try {
-    const both = await Promise.all([
-      ghJSON(`https://api.github.com/repos/${REPO}/commits?per_page=100&path=${encodeURIComponent(file)}`),
-      loadCommentary(),
-    ]);
-    commits = both[0];
-    notes = both[1][slug] || [];
-  } catch (e) {
-    if (at === rendered) body.innerHTML = fallback;
-    return;
-  }
+  /* one request per file, each free to fail on its own: a rate-limited or missing path
+     must not take the other one's commits down with it, and a hand-edited commentary
+     entry that is not an array must not leave the rail stuck on "Loading…" */
+  const lists = await Promise.all(files.map(f =>
+    ghJSON(`https://api.github.com/repos/${REPO}/commits?per_page=100&path=${encodeURIComponent(f)}`)
+      .then(r => (Array.isArray(r) ? r : null), () => null)
+  ));
+  const filed = await loadCommentary();
+  const notes = Array.isArray(filed[slug]) ? filed[slug] : [];
   if (at !== rendered) return;                 // navigated away mid-fetch
-  if (!Array.isArray(commits) || !commits.length) { body.innerHTML = fallback; return; }
+  if (!lists.some(Boolean)) { body.innerHTML = fallback; return; }
+
+  /* one page's record can be spread over several files (the map is its prose plus
+     its manifest); merge them into a single dated list, a commit counted once */
+  const seen = bare(), commits = [];
+  lists.forEach(l => {
+    if (!l) return;
+    l.forEach(c => { if (!seen[c.sha]) { seen[c.sha] = true; commits.push(c); } });
+  });
+  commits.sort((a, b) => String(b.commit.author.date).localeCompare(String(a.commit.author.date)));
+  if (!commits.length) { body.innerHTML = fallback; return; }
 
   const revs = commits.map(c => {
     const msg = String(c.commit.message).split(/\r?\n/);
     return {
       sha: c.sha,
       date: String(c.commit.author.date).slice(0, 10),
-      subject: msg[0].replace(/^post\([^)]*\):\s*/, ""),
+      subject: msg[0].replace(/^(post|note)\([^)]*\):\s*/, "").replace(/^map:\s*/, ""),
       why: msg.slice(1).join("\n").trim(),
       notes: notes.filter(n => n.sha && c.sha.indexOf(String(n.sha)) === 0)
                   .sort((a, b) => String(a.date).localeCompare(String(b.date))),
     };
   });
-  state.hist = { file, revs, open: -1 };
+  state.hist = { files, revs, open: -1 };
 
   body.innerHTML = `
     <ol class="revs">
@@ -441,7 +917,8 @@ async function renderHistory(slug, file) {
           ${r.notes.length ? `<span class="rev-badge">${r.notes.length} reading${r.notes.length > 1 ? "s" : ""}</span>` : ""}
         </button></li>`).join("")}
     </ol>
-    <a class="rail-more" href="https://github.com/${REPO}/commits/main/${file}" target="_blank" rel="noopener">Full log</a>`;
+    ${logs.map((u, i) => `<a class="rail-more" href="${u}" target="_blank" rel="noopener">${
+      files.length > 1 ? esc(files[i].split("/").pop()) : "Full log"}</a>`).join("")}`;
 
   body.querySelectorAll(".rev-item").forEach(b =>
     b.addEventListener("click", () => openRev(Number(b.dataset.rev)))
@@ -481,15 +958,21 @@ async function openRev(i) {
   let diff;
   try {
     const c = await ghJSON(`https://api.github.com/repos/${REPO}/commits/${r.sha}`);
-    const f = (c.files || []).filter(x => x.filename === h.file)[0];
-    diff = !f ? `<p class="empty">This commit does not touch the post file.</p>`
-      : f.status === "added" ? `<p class="empty">Post created — ${f.additions} lines.</p>`
-      : renderPatch(f.patch);
+    const touched = (c.files || []).filter(x => h.files.indexOf(x.filename) >= 0);
+    diff = !touched.length ? `<p class="empty">This commit does not touch the post file.</p>`
+      : touched.map(f => {
+          const label = h.files.length > 1 ? `<p class="diff-file">${esc(f.filename)}</p>` : "";
+          const cls = /\.json$/.test(f.filename) ? " mono" : "";
+          const one = f.status === "added"
+            ? `<p class="empty">Created — ${f.additions} lines.</p>`
+            : `<div class="diff${cls}">${renderPatch(f.patch)}</div>`;
+          return label + one;
+        }).join("");
   } catch (e) {
     diff = `<p class="empty">Diff unavailable — <a href="https://github.com/${REPO}/commit/${esc(r.sha)}" target="_blank" rel="noopener">read it on GitHub</a>.</p>`;
   }
   if (state.hist !== h || h.open !== i) return;
-  detail.innerHTML = head + `<div class="rev-block"><h4>What changed</h4><div class="diff">${diff}</div></div>` + tail;
+  detail.innerHTML = head + `<div class="rev-block"><h4>What changed</h4>${diff}</div>` + tail;
   bindClose(detail);
 }
 

@@ -4,6 +4,10 @@ A fully static personal site, live at [haotianfang.com](https://haotianfang.com)
 One build step: `build_pages.py` writes a real HTML page per post.
 
 - **Posts**: `posts/*.md`, indexed by `posts.json`; start from `posts/_template.md`.
+- **Learning map**: `/learning-map` is an index — a searchable graph of atomic notes
+  (`posts/learning/*.md`, indexed by `learning.json`, served at `/learning/<slug>`),
+  each a video plus a hand-typed transcript. The notes are deliberately absent from
+  `posts.json`, so they stay out of the home list and the site-wide search.
 - **Home**: bio + ventures + academic + post list with full-text search, category
   filter, excerpts, and pagination; plus a multilingual epigraph section.
 - **Article features**: Markdown (vendored `marked`), LaTeX via KaTeX (`$…$`, `$$…$$`),
