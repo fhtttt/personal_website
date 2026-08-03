@@ -878,8 +878,8 @@ function drawEdges() {
    Two layers, deliberately kept apart. The commit list and its diffs come from
    GitHub and are not editable after the fact; the notes come from a file in the
    repo and are dated, so a commit can accumulate several readings over years.
-   Only commits touching posts/<slug>.md are queried, which is why site-development
-   commits never show up here. */
+   Only commits touching posts/<slug>.md are queried, and `site:` ones are dropped
+   below, so site-development commits never show up here. */
 async function renderHistory(slug, files) {
   const body = document.getElementById("rail-body");
   const at = rendered;
@@ -903,7 +903,14 @@ async function renderHistory(slug, files) {
   const seen = bare(), commits = [];
   lists.forEach(l => {
     if (!l) return;
-    l.forEach(c => { if (!seen[c.sha]) { seen[c.sha] = true; commits.push(c); } });
+    /* A `site:` commit is the site's record, not the post's, and querying by path used
+       to be enough to keep it out: it never touched posts/<slug>.md. Retagging and
+       resummarising broke that — both live in the frontmatter of that very file — so
+       they are dropped by subject instead. Nothing about filing belongs in this rail. */
+    l.forEach(c => {
+      if (/^site:\s/.test(String(c.commit.message))) return;
+      if (!seen[c.sha]) { seen[c.sha] = true; commits.push(c); }
+    });
   });
   commits.sort((a, b) => String(b.commit.author.date).localeCompare(String(a.commit.author.date)));
   if (!commits.length) { body.innerHTML = fallback; return; }

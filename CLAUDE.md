@@ -110,9 +110,16 @@ without the user asking for it in those terms.
 
 Every post page carries a `History` rail listing the commits that touched
 `posts/<slug>.md` — read live from the GitHub API, so it needs no build step and
-shows nothing until the commit is pushed. Because it queries that one path, `site:`
-commits never appear in it. Clicking a revision opens the commit's *why* (the
-message body), a word-level diff of the markdown, and the readings attached to it.
+shows nothing until the commit is pushed. Clicking a revision opens the commit's *why*
+(the message body), a word-level diff of the markdown, and the readings attached to it.
+
+**`site:` commits must never appear in this rail**, and the path query alone no longer
+guarantees it. It used to: a site commit had no business in `posts/<slug>.md`. Then
+`tags` and `summary` were ruled filing rather than content, and both live in that file's
+frontmatter, so `site: Widen the Great Works That Read Me summary` turned up in the rail
+next to the writing. `renderHistory()` now drops any commit whose subject starts with
+`site:`. Keep that filter: this rail is the post's argument with itself, and a change of
+filing is not part of the argument.
 
 `commentary.json` is the 史論 layer and the only hand-written part:
 
