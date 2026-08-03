@@ -4,7 +4,9 @@ category: Others
 created: 2026-07-26
 updated: 2026-07-26
 summary: On writing your own history — a line misread for eleven hundred years, and what it takes to keep a record that can argue back.
-tags: history, memory, philology, AI
+tags:
+  - history
+  - AI
 ---
 
 > Should I mark more than shining hours?  
