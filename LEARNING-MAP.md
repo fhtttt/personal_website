@@ -6,10 +6,31 @@ of them and a search box over their full text.
 
 This file is the procedure. The division of labour is fixed:
 
-> **You write markdown. Claude does everything else.**
+> **You write markdown in Obsidian. Claude does everything else.**
 >
 > You touch `posts/learning/<slug>.md` and nothing else. Claude keeps `learning.json`,
 > the generated pages and the commits in step with it.
+
+## The vault
+
+**`posts/` is the Obsidian vault.** Open that folder as a vault; everything else in the
+repo — `assets/`, `build_pages.py`, this file — stays outside it, so the graph view and
+the file tree show only what you actually write.
+
+```
+posts/                     ← open this in Obsidian
+  write-your-own-history.md
+  learning-map.md          ← the index note
+  learning/                ← the atomic notes
+    dedekind-cut.md
+  attachments/             ← images (set this as Obsidian's attachment folder)
+  .obsidian/               ← gitignored
+```
+
+Filenames are **kebab-case, ASCII** — the filename *is* the slug and the URL, so
+`[[dedekind-cut]]` in Obsidian and `/learning/dedekind-cut` on the web are the same
+name. Set Obsidian → Files & Links → *Default location for new attachments* to
+`attachments`, and *New link format* to **shortest path**.
 
 The conventions this rests on — and the traps that are easy to reintroduce — are in
 [`CLAUDE.md`](./CLAUDE.md). Read that before changing how any of it works.
@@ -53,7 +74,9 @@ title: Dedekind Cuts
 created: 2026-07-31
 updated: 2026-07-31
 summary: Constructing the reals out of the rationals by cutting the line in two.
-tags: analysis, construction of the reals
+tags:
+  - analysis
+  - construction of the reals
 ---
 
 https://www.youtube.com/watch?v=XXXXXXXXXXX
@@ -67,8 +90,7 @@ $$
 A = \{\, q \in \mathbb{Q} : q < 0 \ \text{or}\ q^2 < 2 \,\}
 $$
 
-That question is [comparing infinities](/learning/infinity-comparison), and it has to be
-settled first.
+That question is [[infinity-comparison]], and it has to be settled first.
 ```
 
 Three things about that file and nothing else matters:
@@ -80,8 +102,25 @@ Three things about that file and nothing else matters:
 - **The transcript is ordinary markdown.** Inline maths in `$…$`, display maths in
   `$$…$$`, rendered by KaTeX. A literal dollar sign is `\$`. Footnotes (`[^id]` plus a
   `[^id]: …` line) work here exactly as in a post.
-- **A link to another note is a root-absolute path**: `[text](/learning/<slug>)`, never a
-  relative one and never `.html`. Those stay inside the app instead of reloading the page.
+- **Links are Obsidian wikilinks.** Write `[[…]]` exactly as you would in the vault —
+  nothing else.
+
+### Wikilinks
+
+| you write | the web shows |
+|---|---|
+| `[[dedekind-cut]]` | a link reading **Dedekind Cuts** — the note's own title, not the slug |
+| `[[dedekind-cut\|the cut]]` | a link reading *the cut* |
+| `[[dedekind-cut#Transcript]]` | **Dedekind Cuts › Transcript**, landing on that heading |
+| `[[write-your-own-history]]` | works across the whole site, not just the map |
+| `![[diagram.png]]` | the image, from `posts/attachments/` |
+| `[[typo-here]]` | faded plain text, the way Obsidian shows an unresolved link |
+
+Resolution is by filename, and by title as a fallback, so `[[Dedekind Cuts]]` works too.
+Wikilinks inside a fenced code block are left alone. `build_pages.py` names every
+wikilink that resolves to nothing, so a typo cannot ship silently — **run it before
+committing**. Transclusion (`![[note]]` to inline another note) is not supported and
+degrades to a link.
 
 Leave `created` and `updated` as today's date; Claude backfills them from git after the
 first commit.
@@ -89,9 +128,9 @@ first commit.
 ### 2. Claude: wire it in
 
 - adds the node to `learning.json` — `slug`, `file`, `title`, `created`, `updated`,
-  `summary`, `tags` — every field matching the frontmatter. (`tags` is a comma-separated
-  string in the frontmatter and a JSON **array** here. That is the one deliberate
-  difference; `build_pages.py` warns about every other kind of drift.)
+  `summary`, `tags` — every field matching the frontmatter. (`tags` is a YAML **list**
+  in the frontmatter — Obsidian's own form — and a JSON **array** here. That is the one
+  deliberate difference; `build_pages.py` warns about every other kind of drift.)
 - adds any `edges` you asked for
 - runs `python3 build_pages.py`, which writes `learning/dedekind-cut.html`
 - previews it locally and shows you the result
