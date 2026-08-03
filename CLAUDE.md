@@ -262,6 +262,19 @@ no `??`, no class private fields. Consume the preceding character in the match i
 (Safari 15+), but it is a separate `<script>`, so if it fails only article rendering
 breaks — the home page survives. Do not inline it into `app.js`.
 
+## `grep` finds nothing in `assets/app.js` unless you pass `-a`
+
+`footnotes()` parks each definition behind a literal NUL byte (`return "\0"`, stripped a
+few lines later by `md.replace(/^\0\n?/gm, "")`). That one byte makes `file assets/app.js`
+report `data`, and **grep then treats the whole file as binary: no matches, no output, exit
+1** — not even the usual `Binary file … matches` line. An empty result is therefore
+indistinguishable from "that identifier does not appear here", which is exactly how `tags`
+was once read as unused by the search when `app.js:437` splices it into the haystack.
+
+Always `grep -a` on `app.js`, and distrust any empty grep over it. Do not swap the
+placeholder for a printable character to make grep behave — it has to be a byte that
+cannot occur in a post, which is the whole reason NUL was chosen.
+
 ## Categories (fixed four, do not add new ones)
 
 `Information Theory` · `Complex System` · `History of Philosophy` · `Others`
