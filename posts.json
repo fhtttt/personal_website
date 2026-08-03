@@ -1,5 +1,18 @@
 [
   {
+    "slug": "great-works-that-read-me",
+    "file": "posts/great-works-that-read-me.md",
+    "title": "Great Works That Read Me",
+    "category": "Others",
+    "created": "2026-08-03",
+    "updated": "2026-08-03",
+    "summary": "A running record of the books, lectures, films, essays and papers that read my life seriously.",
+    "tags": [
+      "recommendation",
+      "reading"
+    ]
+  },
+  {
     "slug": "learning-map",
     "file": "posts/learning-map.md",
     "title": "Learning Map",
