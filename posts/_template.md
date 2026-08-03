@@ -4,7 +4,9 @@ category: Information Theory
 created: 2026-07-13
 updated: 2026-07-13
 summary: 一句话摘要（显示在列表和搜索里）。
-tags: tag1, tag2
+tags:
+  - tag1
+  - tag2
 ---
 
 正文从这里开始，支持标准 Markdown。写新文章时：复制这个文件为 `posts/<slug>.md`，
