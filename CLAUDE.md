@@ -40,6 +40,19 @@ Commit it byte for byte, typos included; do not silently rewrap or fix punctuati
 
 For a brand-new post: `post(<slug>): Add <Title>`, body = why this post exists.
 
+**When the post is a running list, the subject names the entries, not the category.**
+`Add the first lectures and poems` tells a reader of the History rail nothing: the rail
+shows subjects collapsed, so a subject that describes the *kind* of change leaves the
+revision unreadable until it is clicked. Name the works instead, copied from the entries
+themselves and stripped of their markdown links:
+
+```
+post(great-works-that-read-me): 王維《雜詩三首·其二》、李商隱《無題·相見時難別亦難》
+```
+
+Length is not the constraint here — legibility is; the ≤72-char rule below is for `site:`
+commits only. This applies to any post that accumulates items rather than argues a case.
+
 ### Site commits — Claude writes these, minimal and uniform
 
 ```
