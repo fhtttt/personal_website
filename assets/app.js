@@ -926,7 +926,10 @@ async function renderHistory(slug, files) {
                   .sort((a, b) => String(a.date).localeCompare(String(b.date))),
     };
   });
-  state.hist = { files, revs, open: -1 };
+  /* hold the article as it stands, because opening a revision replaces it with the
+     same article marked up as that revision's diff, and closing has to put it back */
+  const proseEl = document.querySelector("article .prose");
+  state.hist = { files, revs, open: -1, prose: proseEl, proseHTML: proseEl ? proseEl.innerHTML : "" };
 
   body.innerHTML = `
     <ol class="revs">
@@ -955,7 +958,7 @@ async function openRev(i) {
   document.querySelectorAll(".rev-item").forEach(b =>
     b.classList.toggle("active", Number(b.dataset.rev) === h.open)
   );
-  if (close) { detail.innerHTML = ""; return; }
+  if (close) { detail.innerHTML = ""; restoreProse(h); return; }
 
   const r = h.revs[i];
   const head = `
@@ -971,29 +974,124 @@ async function openRev(i) {
       ${r.notes.map(n => `<div class="note"><span class="note-date">${esc(n.date)}</span><div class="note-body">${marked.parseInline(String(n.note || ""))}</div></div>`).join("")}
     </div>` : "";
 
-  detail.innerHTML = head + `<div class="rev-block"><h4>What changed</h4><p class="empty">Loading diff…</p></div>` + tail;
+  /* No "what changed" block: the change is shown on the article itself, below. What
+     stays here is the diff of any *non*-prose file in the page's record — the map's
+     learning.json — which has no prose to be shown on. */
+  detail.innerHTML = head + tail;
   bindClose(detail);
   detail.scrollIntoView({ behavior: "smooth", block: "start" });
 
+  showProseDiff(h, i, r);
+
+  const others = h.files.filter(f => !/\.md$/.test(f));
+  if (!others.length) return;
   let diff;
   try {
     const c = await ghJSON(`https://api.github.com/repos/${REPO}/commits/${r.sha}`);
-    const touched = (c.files || []).filter(x => h.files.indexOf(x.filename) >= 0);
-    diff = !touched.length ? `<p class="empty">This commit does not touch the post file.</p>`
-      : touched.map(f => {
-          const label = h.files.length > 1 ? `<p class="diff-file">${esc(f.filename)}</p>` : "";
-          const cls = /\.json$/.test(f.filename) ? " mono" : "";
-          const one = f.status === "added"
-            ? `<p class="empty">Created — ${f.additions} lines.</p>`
-            : `<div class="diff${cls}">${renderPatch(f.patch)}</div>`;
-          return label + one;
-        }).join("");
+    const touched = (c.files || []).filter(x => others.indexOf(x.filename) >= 0);
+    if (!touched.length) return;
+    diff = touched.map(f => `<p class="diff-file">${esc(f.filename)}</p>` + (f.status === "added"
+      ? `<p class="empty">Created — ${f.additions} lines.</p>`
+      : `<div class="diff mono">${renderPatch(f.patch)}</div>`)).join("");
   } catch (e) {
     diff = `<p class="empty">Diff unavailable — <a href="https://github.com/${REPO}/commit/${esc(r.sha)}" target="_blank" rel="noopener">read it on GitHub</a>.</p>`;
   }
   if (state.hist !== h || h.open !== i) return;
-  detail.innerHTML = head + `<div class="rev-block"><h4>What changed</h4>${diff}</div>` + tail;
+  detail.innerHTML = head + `<div class="rev-block"><h4>Manifest</h4>${diff}</div>` + tail;
   bindClose(detail);
+}
+
+function restoreProse(h) {
+  if (!h || !h.prose) return;
+  h.prose.innerHTML = h.proseHTML;
+  h.prose.classList.remove("diffing");
+}
+
+/* Re-render the article from the revision's own markdown, marked against the state of
+   the file one commit earlier — so every revision is read against its predecessor, the
+   way `git show` reads. Both versions come from raw.githubusercontent, not the API:
+   they are plain file fetches and do not spend the 60-an-hour budget the rail runs on. */
+async function showProseDiff(h, i, r) {
+  const el = h.prose;
+  const mdPath = h.files.filter(f => /\.md$/.test(f))[0];
+  if (!el || !mdPath) return;
+  try {
+    const c = await ghJSON(`https://api.github.com/repos/${REPO}/commits/${r.sha}`);
+    if (state.hist !== h || h.open !== i) return;
+    const parents = c.parents || [];
+    const now = await rawAt(r.sha, mdPath);
+    /* The commit that created the post has a parent, but the parent has no such file:
+       raw answers 404. That is not a failure, it is "there was nothing here before" —
+       treat it as empty so the founding revision reads as one whole addition. */
+    let before = "";
+    if (parents.length) {
+      try { before = await rawAt(parents[0].sha, mdPath); } catch (e) { before = ""; }
+    }
+    if (state.hist !== h || h.open !== i) return;
+    el.innerHTML = renderMarkdown(diffMarkdown(parseFrontmatter(before).body, parseFrontmatter(now).body));
+    el.classList.add("diffing");
+  } catch (e) {
+    restoreProse(h);                       // a missing revision is not worth a broken article
+  }
+}
+
+/* the file exactly as it stood at one commit; 404 for a path that did not exist yet */
+async function rawAt(sha, path) {
+  const url = "https://raw.githubusercontent.com/" + REPO + "/" + sha + "/" +
+    path.split("/").map(encodeURIComponent).join("/");
+  const key = "raw:" + url;
+  try { const hit = sessionStorage.getItem(key); if (hit !== null) return hit; } catch (e) {}
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("raw " + res.status);
+  const text = await res.text();
+  try { sessionStorage.setItem(key, text); } catch (e) {}
+  return text;
+}
+
+/* markdown in, markdown out: the newer text with the older text's removed lines put
+   back where they stood, each changed line wrapped so it renders struck or highlighted */
+function diffMarkdown(a, b) {
+  return lineOps(a.split("\n"), b.split("\n")).map(o =>
+    o.op === "=" ? o.t : markLine(o.t, o.op === "-" ? "del" : "ins")
+  ).join("\n");
+}
+
+/* Wrap what the line *says*, never what the line *is*: the bullet, the hashes and the
+   quote marker stay outside the tag. Wrapping the whole line would turn a list item
+   into a paragraph, and the diff would destroy the structure it exists to show. */
+function markLine(line, kind) {
+  if (!line.trim()) return line;
+  const m = line.match(/^(\s*(?:[-*+]\s+|\d+[.)]\s+|>+\s*|#{1,6}\s+)?)([\s\S]*)$/);
+  const lead = m ? m[1] : "", rest = m ? m[2] : line;
+  if (!rest.trim()) return line;
+  return lead + "<" + kind + ' class="dprose">' + rest + "</" + kind + ">";
+}
+
+/* longest common subsequence over whole lines — the same shape as wordDiff() below,
+   one level up. Bail out on a pair too large to diff rather than freeze the page. */
+function lineOps(A, B) {
+  const n = A.length, m = B.length;
+  if (!n) return B.map(t => ({ op: "+", t }));
+  if (!m) return A.map(t => ({ op: "-", t }));
+  if (n * m > 4000000) return B.map(t => ({ op: "=", t }));
+  const w = m + 1;
+  const d = new Uint32Array((n + 1) * w);
+  for (let x = n - 1; x >= 0; x--)
+    for (let y = m - 1; y >= 0; y--)
+      d[x * w + y] = A[x] === B[y]
+        ? d[(x + 1) * w + y + 1] + 1
+        : Math.max(d[(x + 1) * w + y], d[x * w + y + 1]);
+
+  const ops = [];
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (A[i] === B[j]) { ops.push({ op: "=", t: A[i] }); i++; j++; }
+    else if (d[(i + 1) * w + j] >= d[i * w + j + 1]) { ops.push({ op: "-", t: A[i] }); i++; }
+    else { ops.push({ op: "+", t: B[j] }); j++; }
+  }
+  while (i < n) { ops.push({ op: "-", t: A[i] }); i++; }
+  while (j < m) { ops.push({ op: "+", t: B[j] }); j++; }
+  return ops;
 }
 
 function bindClose(detail) {
