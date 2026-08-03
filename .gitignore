@@ -1,2 +1,6 @@
 .claude/
 .DS_Store
+
+# posts/ is the Obsidian vault; its local state is not part of the record
+posts/.obsidian/
+posts/.trash/
