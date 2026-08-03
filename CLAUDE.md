@@ -70,6 +70,16 @@ themselves are ordinary content**: `post(learning/<slug>): …` with a body the
 user writes, exactly like any other post. Never mix a `map:` change with a note's
 own change.
 
+### Tags are filing, not content
+
+A change that touches only `tags` — in a post's frontmatter, in `posts.json`, or both —
+says nothing about what the piece argues; it says where the piece is shelved. So it is a
+`site:` commit, Claude writes the one line, and **it does not bump `updated:`**. Bumping
+it would announce to every reader that the article changed when not a word of it did,
+and the History rail records the retag anyway. This is the boundary of the rule below —
+`updated:` follows git for edits to the *writing*, not for every commit that touches
+the file.
+
 ## Published history is append-only from `af8e60f`
 
 On 2026-07-27 the whole history was deliberately collapsed to two commits —
@@ -293,7 +303,8 @@ Don't invent dates. Use the file's git history:
   ```
 
 For a brand-new file not yet committed, fill `created`/`updated` with today's date, then
-backfill from the commands above after committing. When editing an existing post, update only `updated`.
+backfill from the commands above after committing. When editing an existing post, update only `updated`
+— unless the edit is a retag, which does not touch it at all (see *Tags are filing, not content*).
 
 ## Routing
 
