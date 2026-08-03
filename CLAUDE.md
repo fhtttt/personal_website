@@ -124,7 +124,26 @@ without the user asking for it in those terms.
 Every post page carries a `History` rail listing the commits that touched
 `posts/<slug>.md` — read live from the GitHub API, so it needs no build step and
 shows nothing until the commit is pushed. Clicking a revision opens the commit's *why*
-(the message body), a word-level diff of the markdown, and the readings attached to it.
+(the message body) and the readings attached to it.
+
+**The diff is shown on the article, not beside it.** Opening a revision re-renders the
+prose from that revision's own markdown, against the file one commit earlier, with what
+the commit added or removed marked where it stands; closing puts the article back. A
+separate "what changed" block listing raw markdown lines told a reader nothing they
+could read as writing, which is why it is gone. What this rests on:
+
+- Both versions come from `raw.githubusercontent.com`, not the API — plain file fetches
+  that do not spend the 60-an-hour budget the rail itself runs on.
+- The commit that created a post has a parent, but the parent has no such file, and raw
+  answers **404**. That is "nothing was here before", not a failure: it is caught and
+  read as empty, so the founding revision renders as one whole addition. Letting it fall
+  through to the error path put *today's* article under the founding revision's date.
+- `markLine()` wraps what a line **says**, never what a line **is** — the bullet, the
+  `#`s and the quote marker stay outside the tag. Wrapping whole lines turns list items
+  into paragraphs and headings into body text, and the diff destroys the structure it
+  exists to show.
+- `learning.json` has no prose to be drawn on, so the map index keeps a small `Manifest`
+  block in the panel for it. That block is for non-markdown files only.
 
 **`site:` commits must never appear in this rail**, and the path query alone no longer
 guarantees it. It used to: a site commit had no business in `posts/<slug>.md`. Then
@@ -147,11 +166,15 @@ filing is not part of the argument.
   That is the whole point of the file; collapsing them would be exactly the smoothing
   the post argues against.
 - Notes are the user's voice. Claude does not write them, same rule as commit bodies.
-- The diff renders word-by-word for edited paragraphs, and whole-paragraph
-  strike/insert when a paragraph was replaced rather than edited (similarity < 0.4).
-  `wordDiff()` returns `null` in that case — that is the signal, not a failure.
-- The `updated:` frontmatter line shows up as a change in every content diff. It is
-  not filtered out on purpose: it is part of the source.
+- `renderPatch()` / `diffBlock()` / `wordDiff()` now serve **only** the `Manifest` block,
+  i.e. `learning.json`. They still read a unified patch word-by-word, and `wordDiff()`
+  still returns `null` when two paragraphs share too little to interleave (similarity
+  < 0.4) so the caller strikes one and inserts the other — that is the signal, not a
+  failure. None of it touches the prose diff, which works line-by-line instead.
+- **The prose diff shows the body only.** It runs on `parseFrontmatter(...).body` of each
+  version, so `updated:`, `tags:` and `summary:` never appear in it. The old block did
+  show them, deliberately, because it was a diff of the *source*; this one is a diff of
+  the *article*, and frontmatter is not part of the article.
 
 What the panel depends on, all of it load-bearing:
 
