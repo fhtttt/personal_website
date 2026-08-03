@@ -494,6 +494,18 @@ async function renderPost(slug) {
   /* the index is two files — the prose and the manifest the graph is drawn from —
      and both belong to its record, so the rail merges the commits of each */
   renderHistory(slug, isMap ? [file, MAP_FILE] : [file]);
+  scrollToHash();
+}
+
+/* Arriving at /post#heading, the browser looks for the anchor at load time — before
+   the markdown has been fetched, so there is nothing to find and it stays at the top.
+   Every render therefore re-honours the fragment itself, once the content exists. */
+function scrollToHash() {
+  if (!location.hash) return;
+  let id = location.hash.slice(1);
+  try { id = decodeURIComponent(id); } catch (e) {}
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView();
 }
 
 /* ---------- a note of the learning map ---------- */
@@ -547,6 +559,7 @@ async function renderNote(slug) {
   /* a note keeps its own record, on the ordinary rules; its readings are keyed
      `learning/<slug>` in commentary.json so they cannot collide with a post's */
   renderHistory(NOTE_DIR + "/" + slug, [file]);
+  scrollToHash();
 }
 
 /* the edges of the map, seen from one node: what it opens onto, and what opened
@@ -1093,12 +1106,24 @@ function parseFrontmatter(text) {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
   if (!m) return { meta: {}, body: text };
   const meta = {};
+  /* Obsidian writes YAML, and its property editor turns a list into block form:
+       tags:
+         - foo
+         - bar
+     Flatten that back to "foo, bar", so a file edited in Obsidian reads the same as
+     one typed by hand. Without this the key silently becomes an empty string. */
+  let last = "";
   m[1].split(/\r?\n/).forEach(line => {
+    const item = line.match(/^\s+-\s+(.*)$/);
+    if (item && last) {
+      const v = item[1].trim().replace(/^["']|["']$/g, "");
+      meta[last] = meta[last] ? meta[last] + ", " + v : v;
+      return;
+    }
     const i = line.indexOf(":");
     if (i > 0) {
-      const k = line.slice(0, i).trim();
-      let v = line.slice(i + 1).trim().replace(/^["']|["']$/g, "");
-      meta[k] = v;
+      last = line.slice(0, i).trim();
+      meta[last] = line.slice(i + 1).trim().replace(/^["']|["']$/g, "");
     }
   });
   return { meta, body: text.slice(m[0].length) };
@@ -1129,14 +1154,19 @@ function renderMarkdown(md) {
       return videoEmbed(`https://player.bilibili.com/player.html?bvid=${m[1]}&page=1&high_quality=1&autoplay=0`);
     return line;
   }).join("\n");
-  // 3) footnotes: `[^id]` in the text + `[^id]: …` definitions → a numbered Notes list
+  // 3) Obsidian wikilinks — [[note]], [[note|alias]], ![[image.png]]
+  md = wikiLinks(md);
+  // 4) footnotes: `[^id]` in the text + `[^id]: …` definitions → a numbered Notes list
   const fn = footnotes(md);
   md = fn.md + fn.notes;
-  // 4) markdown → html
+  // 5) markdown → html
   let html = marked.parse(md);
-  // 5) post images are written relative to the site root; make that explicit
+  // 6) give headings an id, so [[note#heading]] has something to land on
+  html = html.replace(/<h([2-6])>([\s\S]*?)<\/h\1>/g,
+    (_, lvl, inner) => `<h${lvl} id="${esc(headingId(inner))}">${inner}</h${lvl}>`);
+  // 7) post images are written relative to the site root; make that explicit
   html = html.replace(/(<img\b[^>]*?\ssrc=")(?!\/|https?:|data:)/g, "$1/");
-  // 6) restore math via KaTeX
+  // 8) restore math via KaTeX
   html = html.replace(/@@M(\d+)@@/g, (_, i) => {
     const { display, tex } = math[i];
     if (typeof katex === "undefined") return esc((display ? "$$" : "$") + tex + (display ? "$$" : "$"));
@@ -1172,6 +1202,81 @@ function footnotes(md) {
     `<li id="fn-${id}">${marked.parseInline(defs.get(id))} <a class="fnback" href="#fnref-${id}">↩︎</a></li>`
   ).join("\n");
   return { md, notes: `\n\n<section class="footnotes"><h2>Notes</h2><ol>\n${items}\n</ol></section>\n` };
+}
+
+/* ---------- Obsidian wikilinks ----------
+   Everything here is written in Obsidian, in the vault rooted at posts/, so a link
+   between two pieces of writing is `[[…]]` and nothing else. Filenames are kebab-case
+   and equal to the slug, which is what makes resolution a lookup rather than a guess.
+
+     [[dedekind-cut]]            → the note, shown under its own title
+     [[dedekind-cut|the cut]]    → the note, shown as "the cut"
+     [[dedekind-cut#Transcript]] → straight to that heading
+     ![[diagram.png]]           → the image, from posts/attachments/
+     [[nothing-here]]           → rendered plain and faded, the way Obsidian shows an
+                                  unresolved link. A dead <a> would be worse.
+
+   `![[note]]` (transclusion) is not supported and degrades to a link. */
+const ATTACHMENTS = "attachments";
+const IMG_EXT = /\.(png|jpe?g|gif|svg|webp|avif)$/i;
+
+function headingId(html) {
+  return String(html).replace(/<[^>]*>/g, "").trim().toLowerCase()
+    .replace(/[^\w一-鿿]+/g, "-").replace(/^-+|-+$/g, "") || "section";
+}
+
+/* the vault's note names are slugs, so a name resolves by slug first; matching the
+   title too is a courtesy for when a title is typed by hand instead of autocompleted */
+function resolveWiki(name) {
+  const key = name.trim().toLowerCase();
+  if (!key) return null;
+  let i;
+  for (i = 0; i < state.posts.length; i++) {
+    const p = state.posts[i];
+    if (String(p.slug).toLowerCase() === key || String(p.title || "").toLowerCase() === key)
+      return { href: "/" + encodeURIComponent(p.slug), title: p.title || p.slug, attr: "post", slug: p.slug };
+  }
+  const ns = state.map.nodes;
+  for (i = 0; i < ns.length; i++) {
+    const n = ns[i];
+    if (String(n.slug).toLowerCase() === key || String(n.title || "").toLowerCase() === key)
+      return { href: noteHref(n.slug), title: n.title || n.slug, attr: "note", slug: n.slug };
+  }
+  return null;
+}
+
+function wikiLinks(md) {
+  let fenced = false;
+  return md.split("\n").map(line => {
+    if (/^\s*(```|~~~)/.test(line)) { fenced = !fenced; return line; }
+    if (fenced) return line;
+    return line.replace(/(!?)\[\[([^\][]+)\]\]/g, (whole, bang, body) => {
+      const bar = body.indexOf("|");
+      const alias = bar >= 0 ? body.slice(bar + 1).trim() : "";
+      let name = (bar >= 0 ? body.slice(0, bar) : body).trim();
+      const hash = name.indexOf("#");
+      let heading = "";
+      if (hash >= 0) { heading = name.slice(hash + 1).trim(); name = name.slice(0, hash).trim(); }
+
+      if (bang && IMG_EXT.test(name)) {
+        // Obsidian embeds an attachment by bare filename; a name with a slash is a
+        // path from the vault root, which is posts/
+        const src = "/posts/" + (name.indexOf("/") >= 0 ? name : ATTACHMENTS + "/" + name)
+          .split("/").map(encodeURIComponent).join("/");
+        return `<img src="${esc(src)}" alt="${esc(alias || name)}" loading="lazy">`;
+      }
+
+      const hit = resolveWiki(name);
+      if (!hit) return `<span class="wiki-dead" title="No note named &quot;${esc(name)}&quot;">${esc(alias || body)}</span>`;
+      const anchor = heading ? "#" + encodeURIComponent(headingId(heading)) : "";
+      const text = alias || (heading ? hit.title + " › " + heading : hit.title);
+      /* no data-* when the link carries an anchor: the in-app route would land on the
+         page and drop the fragment, because the heading does not exist until the
+         markdown has been fetched and rendered. A real navigation gets it right. */
+      const data = anchor ? "" : ` data-${hit.attr}="${esc(hit.slug)}"`;
+      return `<a class="wiki"${data} href="${esc(hit.href + anchor)}">${esc(text)}</a>`;
+    });
+  }).join("\n");
 }
 
 function videoEmbed(src) {

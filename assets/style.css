@@ -226,6 +226,18 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
 .prose table { border-collapse: collapse; width: 100%; display: block; overflow-x: auto; }
 .prose th, .prose td { border: 1px solid var(--line); padding: 6px 12px; text-align: left; }
 
+/* wikilinks — written [[like this]] in Obsidian. A resolved one is an ordinary link
+   with a dotted underline; an unresolved one is faded and unclickable rather than a
+   dead <a>, which is how Obsidian itself shows a link to a note that isn't there. */
+.prose a.wiki {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--line);
+  text-underline-offset: 3px;
+}
+.prose a.wiki:hover { text-decoration-color: currentColor; }
+.prose .wiki-dead { color: var(--muted); opacity: .65; cursor: help; border-bottom: 1px dotted var(--line); }
+
 /* footnotes */
 .prose .fnref { font-size: .72em; vertical-align: super; line-height: 0; margin-left: 1px; }
 .prose .fnref a { text-decoration: none; }

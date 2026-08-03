@@ -117,6 +117,39 @@ def frontmatter(path):
     return meta
 
 
+WIKI_RE = re.compile(r"(!?)\[\[([^\][]+)\]\]")
+FENCE_RE = re.compile(r"^\s*(```|~~~)", re.M)
+IMG_EXT_RE = re.compile(r"\.(png|jpe?g|gif|svg|webp|avif)$", re.I)
+
+
+def check_wikilinks(sources, known):
+    """A `[[link]]` that resolves to nothing renders faded instead of blowing up, which
+    means a typo would otherwise ship unnoticed. Name every one at build time."""
+    bad = 0
+    for path, slug in sources:
+        text = path.read_text(encoding="utf-8")
+        # strip fenced code, so a wikilink shown as an example is not treated as a link
+        parts, fenced = [], False
+        for line in text.splitlines():
+            if FENCE_RE.match(line):
+                fenced = not fenced
+                continue
+            if not fenced:
+                parts.append(line)
+        for bang, body in WIKI_RE.findall("\n".join(parts)):
+            name = body.split("|")[0].split("#")[0].strip()
+            if bang and IMG_EXT_RE.search(name):
+                target = ROOT / "posts" / (name if "/" in name else f"attachments/{name}")
+                if not target.is_file():
+                    print(f"  ! {slug}: ![[{name}]] — no such attachment")
+                    bad += 1
+                continue
+            if name.lower() not in known:
+                print(f"  ! {slug}: [[{name}]] resolves to nothing")
+                bad += 1
+    return bad
+
+
 def sweep(directory, wanted, label):
     """Delete generated pages whose entry is gone; never touch a file we did not write."""
     if not directory.is_dir():
@@ -204,6 +237,19 @@ def main() -> int:
             (ROOT / NOTE_DIR / f"{slug}.html").write_text(
                 page(n, slug, f"{SITE_URL}/{NOTE_DIR}/{slug}", n["file"]), encoding="utf-8")
             print(f"  wrote {NOTE_DIR}/{slug}.html")
+
+    known = set()
+    sources = []
+    for p in posts:
+        known.add(p["slug"].lower())
+        known.add(str(p.get("title", "")).lower())
+        sources.append((ROOT / p.get("file", f"posts/{p['slug']}.md"), p["slug"]))
+    for n in nodes:
+        known.add(n["slug"].lower())
+        known.add(str(n.get("title", "")).lower())
+        sources.append((ROOT / n["file"], n["slug"]))
+    known.discard("")
+    check_wikilinks([(p, s) for p, s in sources if p.is_file()], known)
 
     sweep(ROOT / NOTE_DIR, note_wanted, f"{NOTE_DIR}/")
     if (ROOT / NOTE_DIR).is_dir() and not any((ROOT / NOTE_DIR).iterdir()):
