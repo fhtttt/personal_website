@@ -946,6 +946,158 @@ async function renderHistory(slug, files) {
   body.querySelectorAll(".rev-item").forEach(b =>
     b.addEventListener("click", () => openRev(Number(b.dataset.rev)))
   );
+
+  loadBlame(state.hist);
+}
+
+/* ---------- blame: which revision put this line here ----------
+   A running list grows one entry at a time, and the question a reader has of any single
+   entry is *when did this arrive*. The rail answers that for the article as a whole; this
+   answers it per line, on hover, without the reader having to open anything.
+
+   There is no blame in GitHub's REST API — it exists only in GraphQL, which needs a token
+   this site does not have. So it is computed here: every version of the file, oldest to
+   newest, diffed against the one before it, each line carrying the revision that produced
+   it. `git blame` semantics — a line edited later belongs to the edit, not to its first
+   appearance. The versions come from raw.githubusercontent and are cached per sha, so the
+   cost is one plain fetch per revision, once per session, and none of the API budget.
+
+   Lines are matched to the rendered page by their text, not by number, because the HTML
+   carries no line numbers. Two identical lines in one post therefore share an answer —
+   the later one wins. That is a real limit, and the reason this is a hint on hover rather
+   than a claim printed in the page. */
+async function loadBlame(h) {
+  const mdPath = h.files.filter(f => /\.md$/.test(f))[0];
+  if (!mdPath || h.revs.length < 1) return;
+  const order = h.revs.slice().reverse();               // oldest first
+  try {
+    const texts = [];
+    for (let i = 0; i < order.length; i++) texts.push(parseFrontmatter(await rawAt(order[i].sha, mdPath)).body);
+    if (state.hist !== h) return;
+
+    let prev = [], origin = [];
+    for (let v = 0; v < texts.length; v++) {
+      const curr = texts[v].split("\n");
+      const next = [];
+      let pi = 0, ci = 0;
+      lineOps(prev, curr).forEach(o => {
+        if (o.op === "=") { next[ci] = origin[pi]; pi++; ci++; }
+        else if (o.op === "+") { next[ci] = v; ci++; }
+        else pi++;
+      });
+      prev = curr; origin = next;
+    }
+
+    const byText = bare();
+    for (let i = 0; i < prev.length; i++) {
+      const key = lineKey(prev[i]);
+      if (key) byText[key] = order[origin[i] === undefined ? 0 : origin[i]];
+    }
+    h.blame = byText;
+    bindBlameHover(h);
+  } catch (e) { /* the article is readable without it; say nothing */ }
+}
+
+/* the source line reduced to the text a reader actually sees, so a rendered block can be
+   looked up by what it says. Rendering the line is more honest than stripping syntax with
+   regexes — it goes through the same wikilink and inline-markdown path the article did. */
+function lineKey(line) {
+  const body = String(line).replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+|>+\s*|#{1,6}\s+)/, "");
+  if (!body.trim()) return "";
+  const d = document.createElement("div");
+  try { d.innerHTML = marked.parseInline(wikiLinks(body)); } catch (e) { d.textContent = body; }
+  return d.textContent.replace(/\s+/g, "");
+}
+
+/* what a rendered block says, on the same terms: the named source chip is furniture the
+   markdown never had, and footnote markers are not part of the sentence either */
+function blockKey(el) {
+  const c = el.cloneNode(true);
+  c.querySelectorAll(".src, .fnref").forEach(n => n.parentNode.removeChild(n));
+  return c.textContent.replace(/\s+/g, "");
+}
+
+const BLAME_BLOCKS = "li, p, h2, h3, h4, h5, h6, blockquote";
+
+/* The chip has to be clickable, and it stands over the prose box — so reaching for it is
+   a `mouseleave` on the prose, which used to hide it, which put the pointer back over the
+   prose, which showed it again: a flicker loop that made it impossible to click. Leaving
+   towards the chip is therefore not leaving, and every hide waits a moment in case the
+   pointer is only crossing a gap. */
+let blameFor = null, blameTimer = 0;
+
+function bindBlameHover(h) {
+  const prose = h.prose;
+  if (!prose || prose.dataset.blameBound) return;
+  prose.dataset.blameBound = "1";
+
+  prose.addEventListener("mouseover", e => {
+    const hist = state.hist;
+    if (!hist || !hist.blame || hist.open >= 0) return;   // a revision is open: that view is the diff
+    let el = e.target;
+    while (el && el !== prose && !el.matches(BLAME_BLOCKS)) el = el.parentNode;
+    if (!el || el === prose) return scheduleHideBlame(null);
+    if (el.querySelector && el.querySelector(BLAME_BLOCKS)) return scheduleHideBlame(null);  // a list, not an item
+    const hit = hist.blame[blockKey(el)];
+    if (!hit) return scheduleHideBlame(null);
+    showBlame(el, hit, hist.revs.indexOf(hit));
+  });
+  prose.addEventListener("mouseleave", scheduleHideBlame);
+}
+
+function blameChip() {
+  let el = document.getElementById("blame-chip");
+  if (el) return el;
+  el = document.createElement("button");
+  el.id = "blame-chip";
+  el.className = "blame";
+  el.addEventListener("click", () => {
+    const i = Number(el.dataset.rev);
+    if (i >= 0) openRev(i);
+  });
+  el.addEventListener("mouseenter", () => clearTimeout(blameTimer));
+  el.addEventListener("mouseleave", () => scheduleHideBlame(null));
+  document.body.appendChild(el);
+  return el;
+}
+
+function scheduleHideBlame(e) {
+  const chip = document.getElementById("blame-chip");
+  const to = e && e.relatedTarget;
+  if (to && chip && (to === chip || chip.contains(to))) return;   // heading for the chip, not away
+  clearTimeout(blameTimer);
+  blameTimer = setTimeout(hideBlame, 140);
+}
+
+function hideBlame() {
+  clearTimeout(blameTimer);
+  blameFor = null;
+  const el = document.getElementById("blame-chip");
+  if (el) el.classList.remove("on");
+}
+
+/* Placed off the end of the line's own last line-box, so on a short entry it sits in open
+   margin and touches nothing. A full-width paragraph has no such gap, so it is clamped
+   inside the column and left translucent: legible as an annotation, and never hiding a
+   word outright. It is out of the text flow entirely, so selecting the prose is unaffected. */
+function showBlame(block, rev, idx) {
+  clearTimeout(blameTimer);
+  const el = blameChip();
+  if (blameFor === block && el.classList.contains("on")) return;   // same line: do not re-measure
+  blameFor = block;
+  el.textContent = rev.date;
+  el.dataset.rev = String(idx);
+  el.classList.add("on");
+
+  const range = document.createRange();
+  range.selectNodeContents(block);
+  const rects = range.getClientRects();
+  const last = rects.length ? rects[rects.length - 1] : block.getBoundingClientRect();
+  const bound = (state.hist.prose || block).getBoundingClientRect();
+  const w = el.offsetWidth;
+  const left = Math.min(last.right + 14, Math.max(bound.left, bound.right - w));
+  el.style.left = (window.pageXOffset + left) + "px";
+  el.style.top = (window.pageYOffset + last.top + (last.height - el.offsetHeight) / 2) + "px";
 }
 
 async function openRev(i) {
