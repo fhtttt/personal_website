@@ -145,6 +145,34 @@ could read as writing, which is why it is gone. What this rests on:
 - `learning.json` has no prose to be drawn on, so the map index keeps a small `Manifest`
   block in the panel for it. That block is for non-markdown files only.
 
+### Blame on hover — which revision put this line here
+
+Hovering a line of prose floats a translucent date beside it. A running list grows one
+entry at a time, and the question asked of any single entry is *when did this arrive*;
+the rail answers it for the article, this answers it per line without opening anything.
+
+- **There is no blame in GitHub's REST API.** It exists only in GraphQL, which needs a
+  token this site does not have. `loadBlame()` computes it: every version of the file,
+  oldest to newest, each diffed against the one before, every line carrying the revision
+  that produced it. `git blame` semantics — a line edited later belongs to the edit.
+- Versions come from **`raw.githubusercontent.com`**, cached per sha in `sessionStorage`.
+  One plain fetch per revision per session, and **none of the 60-an-hour API budget** the
+  rail itself runs on. Keep it that way; routing this through the API would starve the rail.
+- **Lines are matched to the page by their text, not by number** — the rendered HTML has
+  no line numbers. `lineKey()` renders the source line through the same wikilink and
+  inline-markdown path the article took, so the two sides are compared as a reader sees
+  them. **Two identical lines in one post therefore share one answer**, the later winning.
+  That is a real limit and the reason this is a hint on hover, not a claim printed inline.
+- **The chip must stay clickable, and that is what made it flicker.** It stands over the
+  prose box, so reaching for it fires `mouseleave` on the prose → hidden → pointer is over
+  the prose again → shown → hidden: a loop that made it unclickable. Leaving *towards* the
+  chip is not leaving (`relatedTarget`), hiding waits 140 ms, and re-hovering the same
+  block does not re-measure. Do not simplify any of those three back out.
+- It lives on `<body>`, not in `.prose`: absolutely positioned, out of the text flow, so
+  it never reflows the article and **never joins a selection** — select the whole post and
+  the date is not in it. It is suppressed entirely while a revision is open (the article
+  is already the diff) and on `(hover: none)` devices.
+
 **`site:` commits must never appear in this rail**, and the path query alone no longer
 guarantees it. It used to: a site commit had no business in `posts/<slug>.md`. Then
 `tags` and `summary` were ruled filing rather than content, and both live in that file's
@@ -297,6 +325,13 @@ and anything the site wants to show differently is a rendering concern, handled 
 - **LaTeX**: `$…$` inline, `$$…$$` display, rendered by KaTeX (loaded from CDN in `index.html`). Literal dollar sign = `\$`.
 - **Images**: `![alt](assets/images/foo.png)` — paths are relative to the **site root** (not the `.md` file), because the article HTML is injected into `index.html`. Put files under `assets/images/`.
 - **Video**: put a bare YouTube or Bilibili video URL **alone on its own line**; it auto-embeds as a responsive 16:9 iframe. (`youtube.com/watch?v=…`, `youtu.be/…`, or `bilibili.com/video/BV…`.)
+- **Outward links**: keep writing them `[title](https://…)`. `nameSources()` then **takes
+  the anchor off the title** and puts a small named source beside it (`YouTube ↗`,
+  `Bilibili ↗`, otherwise the bare domain). The title is left as unclickable prose; the
+  chip is the only control. An accent-coloured title read as emphasis and said nothing
+  about where it led. The chip is `user-select: none`, so copying a line gives the work's
+  name and not the word YouTube. Wikilinks, footnote back-links and root-relative in-app
+  links are all skipped — touching the last of those would break `onNavClick`'s routing.
 
 ## Browser floor: no regex lookbehind in `assets/app.js`
 
