@@ -1271,7 +1271,9 @@ function renderMarkdown(md) {
     (_, lvl, inner) => `<h${lvl} id="${esc(headingId(inner))}">${inner}</h${lvl}>`);
   // 7) post images are written relative to the site root; make that explicit
   html = html.replace(/(<img\b[^>]*?\ssrc=")(?!\/|https?:|data:)/g, "$1/");
-  // 8) restore math via KaTeX
+  // 8) name where an outward link goes, and stop it reading as emphasis
+  html = nameSources(html);
+  // 9) restore math via KaTeX
   html = html.replace(/@@M(\d+)@@/g, (_, i) => {
     const { display, tex } = math[i];
     if (typeof katex === "undefined") return esc((display ? "$$" : "$") + tex + (display ? "$$" : "$"));
@@ -1382,6 +1384,45 @@ function wikiLinks(md) {
       return `<a class="wiki"${data} href="${esc(hit.href + anchor)}">${esc(text)}</a>`;
     });
   }).join("\n");
+}
+
+/* ---------- outward links ----------
+   A link written `[歐麗娟：孤獨的多棱鏡](https://youtu.be/…)` is a citation: the text is
+   the work's own name, and the URL says where it lives. Rendered as bare accent-coloured
+   text it reads as emphasis — four words singled out for no stated reason — and gives no
+   hint that a video is on the other end.
+
+   So the anchor is **taken off the title entirely**. The work's name becomes ordinary,
+   unclickable prose, and a small named source is put beside it carrying the link on its
+   own. Nothing in the sentence pretends to be a control, and the one thing that is a
+   control says where it goes before you follow it. Same ↗ idiom as the identity and
+   venture links on the home page.
+
+   This is a rendering concern only: the vault keeps writing plain markdown links. */
+const SOURCES = [
+  [/(^|\.)youtu\.be$|(^|\.)youtube\.com$/, "YouTube"],
+  [/(^|\.)bilibili\.com$/, "Bilibili"],
+  [/(^|\.)arxiv\.org$/, "arXiv"],
+  [/(^|\.)github\.com$/, "GitHub"],
+  [/(^|\.)wikipedia\.org$/, "Wikipedia"],
+];
+
+function sourceName(href) {
+  let host;
+  try { host = new URL(href).hostname.replace(/^www\./, ""); } catch (e) { return ""; }
+  for (let i = 0; i < SOURCES.length; i++) if (SOURCES[i][0].test(host)) return SOURCES[i][1];
+  return host;                            // anything else is named by its own domain
+}
+
+function nameSources(html) {
+  return html.replace(/<a\s([^>]*?)>([\s\S]*?)<\/a>/g, (whole, attrs, text) => {
+    const m = attrs.match(/href="([^"]*)"/);
+    if (!m || !/^https?:/i.test(m[1])) return whole;          // internal links are not citations
+    if (/\bclass="[^"]*\b(wiki|fnback)\b/.test(attrs)) return whole;
+    const name = sourceName(m[1]);
+    if (!name) return whole;
+    return text + '<a class="src" href="' + m[1] + '" target="_blank" rel="noopener">' + esc(name) + "</a>";
+  });
 }
 
 function videoEmbed(src) {

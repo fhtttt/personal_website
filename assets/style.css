@@ -238,6 +238,23 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
 .prose a.wiki:hover { text-decoration-color: currentColor; }
 .prose .wiki-dead { color: var(--muted); opacity: .65; cursor: help; border-bottom: 1px dotted var(--line); }
 
+/* outward links — the work's name is left as plain, unclickable prose; the only control
+   is this small named source beside it, so nothing in the sentence pretends to be one */
+.prose a.src {
+  color: var(--muted);
+  font-size: .78em;
+  margin-left: 6px;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  text-decoration: none;
+  /* furniture the markdown never had: copying the article should give back the work's
+     name, not the name plus the word YouTube */
+  -webkit-user-select: none;
+  user-select: none;
+}
+.prose a.src::after { content: "\2197"; margin-left: 2px; font-size: .85em; vertical-align: 1px; }
+.prose a.src:hover { color: var(--accent); }
+
 /* footnotes */
 .prose .fnref { font-size: .72em; vertical-align: super; line-height: 0; margin-left: 1px; }
 .prose .fnref a { text-decoration: none; }
