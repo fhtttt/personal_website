@@ -249,6 +249,24 @@ function renderHome() {
 
     ${renderEpigraphs()}
 
+    <section class="section">
+      <h2>What came through</h2>
+      <div class="acad epiph">
+        <div class="item">
+          <div class="yrs">Age 15</div>
+          <div class="body">
+            <p class="deg">that love can fabricate a fact more factual than the facts.</p>
+          </div>
+        </div>
+        <div class="item">
+          <div class="yrs">Age 25</div>
+          <div class="body">
+            <p class="deg">that the in-time manifestation of humanity can be anything at all, but never reason — reason is always post hoc; and that reason can still retrain your humanity afterwards, by rote memorization.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <div class="footer">© <span id="yr"></span> ${esc(SITE.enName)}</div>
   `;
 
