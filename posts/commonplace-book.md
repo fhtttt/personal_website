@@ -2,7 +2,7 @@
 title: A Commonplace Book
 category: Others
 created: 2026-08-13
-updated: 2026-08-13
+updated: 2026-08-20
 summary: A running book of beautiful sentences
 tags:
   - quotation
@@ -47,3 +47,21 @@ The damage arrives wrapped in good intentions.
 ## The whole exchange was ad-libbed; not one word of it was in the script.
 
 The department set up an ad hoc committee to review the incident, and disbanded it in June.
+
+## They imagine the writer as a lone genius crafting their magnum opus in a backwoods cabin with shoddy plumbing.
+
+## Writing from Conversation piggybacks on the brain’s natural ability to compress ideas.
+
+## Gone go the flames of passion and the snarky one-liners
+
+## They’re arson for your scared and timid self
+
+## which ideas are worth sculpting into full-fledged essays.
+
+## the responses catapult my writing on a new trajectory.
+
+## Compressed writing means that the pacing is brisk and each word serves a unique purpose.
+
+## We’re trained to write bloated thesis papers to satisfy the teacher’s word counts
+
+## Pick a publishing cadence and stick to it.
