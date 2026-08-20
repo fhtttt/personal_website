@@ -88,13 +88,15 @@ a:hover { text-decoration: underline; }
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--muted);
-  margin: 0 0 24px;
+  margin: 0;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--line);
 }
 
 /* ---- controls ---- */
-.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px; }
+/* the heading rule is the same 1px line that divides the rows under it, so a row block
+   gets no extra air from the h2 — blocks that are not rows ask for their own. */
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 24px 0 20px; }
 #search, #map-search {
   flex: 1 1 180px;
   min-width: 140px;
