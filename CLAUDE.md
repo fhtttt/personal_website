@@ -368,6 +368,30 @@ cannot occur in a post, which is the whole reason NUL was chosen.
 Order and exact strings are defined by `CATS` at the top of `assets/app.js`. A post's
 `category` must equal one of them exactly. Anything not in the first three goes to `Others`.
 
+## Unlisted posts — `"unlisted": true` in `posts.json`
+
+A post can be served without being offered. The flag keeps it out of the two places the
+site *offers* a post — the home list and the site-wide search — and puts
+`<meta name="robots" content="noindex, nofollow">` in its generated page. Its URL, its
+routing, its History rail and every wikilink pointing at it keep working. **This hides a
+post from someone browsing the site; it does not make it private.**
+
+- **The two halves are one feature.** Dropping it from the home list does nothing about a
+  crawler, which reaches `<slug>.html` at a guessable URL and needs no link to find it.
+  Without the `noindex` the post is off the site and in Google anyway — the one outcome
+  the flag exists to prevent. Never keep one half and drop the other.
+- **The repo is public, and what is already pushed stays readable** — on github.com and in
+  every past commit. Marking a post unlisted stops it being *offered* from today; it
+  retracts nothing, and *Published history is append-only* forbids rewriting to try.
+- `filtered()` in `app.js` is the whole gate: the home list and the search both read it.
+  `renderPost()` and `resolveWiki()` deliberately ignore the flag, so a wikilink to an
+  unlisted post keeps working instead of rotting the prose of the post that cites it.
+  `ensureBodies()` skips unlisted posts — nothing they contain can ever surface.
+- **The notes inherit the map index's flag.** `learning-map` unlisted ⇒ every
+  `learning/<slug>.html` is built with `noindex`, because the notes are reached only
+  through the index. An indexable note under an unlisted map is unlisted in name only.
+- It is filing, not content: a `site:` commit, and **it does not bump `updated:`**.
+
 ## When adding/maintaining a post (what I = Claude do)
 
 1. Write `posts/<slug>.md` with frontmatter on top:

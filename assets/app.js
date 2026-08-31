@@ -292,6 +292,7 @@ async function ensureBodies() {
   if (state.bodiesLoaded) return;
   state.bodiesLoaded = true;
   await Promise.all(state.posts.map(async p => {
+    if (p.unlisted === true) return;   // filtered() can never surface it, so never index it
     try {
       const res = await fetch("/" + p.file);
       if (!res.ok) return;
@@ -449,10 +450,17 @@ function buildSnippet(p, q, store) {
   return hl(s, q);
 }
 
+/* An unlisted post is served, routed and linkable exactly like any other one; what it
+   is kept out of is the two places the site *offers* a post — the home list and the
+   site-wide search. Both read this function, so this one line is the whole gate.
+   `renderPost()` and `resolveWiki()` deliberately ignore the flag: a wikilink pointing
+   at an unlisted post has to keep working, or hiding a post would quietly rot the prose
+   of every post that cites it. `=== true`, not truthiness, for the reason bare() exists. */
 function filtered() {
   const q = state.query.trim().toLowerCase();
   return state.posts
     .filter(p => {
+      if (p.unlisted === true) return false;
       const okCat = state.cat === "all" || p.category === state.cat;
       const tags = Array.isArray(p.tags) ? p.tags.join(" ") : (p.tags || "");
       const hay = `${p.title} ${p.summary || ""} ${p.category || ""} ${tags} ${state.bodies[p.slug] || ""}`.toLowerCase();

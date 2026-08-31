@@ -44,7 +44,7 @@ TEMPLATE = """<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{title} · {site}</title>
-  <meta name="description" content="{summary}">
+  <meta name="description" content="{summary}">{robots}
   <link rel="canonical" href="{url}">
   <meta property="og:site_name" content="{site}">
   <meta property="og:type" content="article">
@@ -86,13 +86,21 @@ def die(msg):
     raise SystemExit("build_pages: " + msg)
 
 
-def page(entry, slug, url, file):
+def page(entry, slug, url, file, noindex=False):
     """The <head> is the only thing that differs per page; fill it from the manifest.
 
     `file` is passed in rather than defaulted here: posts live at posts/<slug>.md and
     notes at posts/learning/<slug>.md, and a default that guessed wrong would produce
-    a page that builds cleanly with a 404 behind its only noscript link."""
+    a page that builds cleanly with a 404 behind its only noscript link.
+
+    `noindex` is what makes "unlisted" mean anything. Keeping a post out of the home
+    list and the site search hides it from a reader browsing the site; it does nothing
+    about a crawler, which reaches <slug>.html directly at a guessable URL and needs no
+    link to find it. Without this meta the post would stay off the site and turn up in
+    a search engine anyway, which is the one outcome the flag exists to prevent."""
+    robots = '\n  <meta name="robots" content="noindex, nofollow">' if noindex else ""
     return MARKER + TEMPLATE.format(
+        robots=robots,
         site=SITE_NAME,
         file=html.escape(file, quote=True),
         url=url,
@@ -220,8 +228,13 @@ def main() -> int:
             die(f"slug {slug!r} collides with a real path in the repo")
         wanted.add(slug)
         (ROOT / f"{slug}.html").write_text(
-            page(p, slug, f"{SITE_URL}/{slug}", p.get("file", f"posts/{slug}.md")), encoding="utf-8")
+            page(p, slug, f"{SITE_URL}/{slug}", p.get("file", f"posts/{slug}.md"),
+                 noindex=p.get("unlisted") is True), encoding="utf-8")
         print(f"  wrote {slug}.html")
+
+    # the notes are reached only through the map index, so they inherit its visibility:
+    # an unlisted map whose notes were indexable would be unlisted in name only
+    map_unlisted = any(p["slug"] == MAP_SLUG and p.get("unlisted") is True for p in posts)
 
     nodes, edges = load_map()
     if nodes and MAP_SLUG not in wanted:
@@ -235,7 +248,8 @@ def main() -> int:
             slug = n["slug"]
             note_wanted.add(slug)
             (ROOT / NOTE_DIR / f"{slug}.html").write_text(
-                page(n, slug, f"{SITE_URL}/{NOTE_DIR}/{slug}", n["file"]), encoding="utf-8")
+                page(n, slug, f"{SITE_URL}/{NOTE_DIR}/{slug}", n["file"],
+                     noindex=map_unlisted), encoding="utf-8")
             print(f"  wrote {NOTE_DIR}/{slug}.html")
 
     known = set()
