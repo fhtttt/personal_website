@@ -262,7 +262,9 @@ function renderHome() {
         <div class="item">
           <div class="yrs">Age 25</div>
           <div class="body">
-            <p class="deg">that the in-time manifestation of humanity can be anything at all, but never reason — reason is always post hoc; and that reason can still retrain your humanity afterwards, by rote memorization.</p>
+            <p class="deg">1. Reason is always post hoc.</p>
+            <p class="deg">2. Learning is about dictation and rote memorization.</p>
+            <p class="deg">3. To see no difference among lives is to treat them with indifference.</p>
           </div>
         </div>
       </div>

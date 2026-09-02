@@ -194,6 +194,8 @@ mark {
 
 /* ---- epiphanies: dated the way the timeline above is ---- */
 .acad.epiph .deg { max-width: 62ch; }
+/* an entry may be several numbered lines; .acad .deg is margin:0, so space them here */
+.acad.epiph .deg + .deg { margin-top: 4px; }
 
 /* contact email — plain muted text */
 .sec-contact { margin: 18px 0 0; font-size: 14.5px; color: var(--muted); }
