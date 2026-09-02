@@ -199,6 +199,7 @@ function renderHome() {
     <p class="links">
       <a href="https://www.linkedin.com/in/haotian-fang-354933254/" target="_blank" rel="noopener">LinkedIn</a>
     </p>
+    <p class="creed">I study how to be a good listener.</p>
 
     <section class="section">
       <h2>La tour d’ivoire avant midi</h2>

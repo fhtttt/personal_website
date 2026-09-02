@@ -80,6 +80,9 @@ a:hover { text-decoration: underline; }
 .links a::after { content: "\2197"; margin-left: 3px; font-size: .8em; vertical-align: 1px; }
 .links a:hover { color: var(--accent); text-decoration-color: currentColor; }
 
+/* the line under the identity links — body colour, so it reads as a claim, not a footnote */
+.creed { margin: 10px 0 0; font-size: 14.5px; color: var(--fg); }
+
 /* ---- sections ---- */
 .section { margin-top: 84px; }
 .section > h2 {
