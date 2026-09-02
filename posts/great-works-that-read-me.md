@@ -2,7 +2,7 @@
 title: Great Works That Read Me
 category: Others
 created: 2026-08-03
-updated: 2026-08-13
+updated: 2026-09-02
 summary: A running record of the books, lectures, films, poems, songs, essays and papers that read my life seriously.
 tags:
   - recommendation
@@ -17,8 +17,8 @@ tags:
 - 歐麗娟 | 美麗與哀愁—李商隱的無題
 - [Randy Pausch's Last Lecture: Achieving Your Childhood Dreams](https://youtu.be/ji5_MqicxSo)
 
-## Films
-
+## Films and TV Series
+- In Geek We Trust (IT狗)
 
 ## Poems and songs
 - 王維《雜詩三首·其二》
