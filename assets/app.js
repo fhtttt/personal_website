@@ -70,11 +70,14 @@ const state = {
 boot();
 
 async function boot() {
-  const [posts, map] = await Promise.all([
+  const [posts, local, map] = await Promise.all([
     fetchJSON("/posts.json"),
+    /* posts.local.json is gitignored: posts written locally and never committed. The
+       live site is https and never has it, so only a local http preview asks for it */
+    location.protocol === "https:" ? null : fetchJSON("/posts.local.json"),
     fetchJSON("/" + MAP_FILE),
   ]);
-  state.posts = Array.isArray(posts) ? posts : [];
+  state.posts = (Array.isArray(posts) ? posts : []).concat(Array.isArray(local) ? local : []);
   state.map = normalizeMap(map);
   window.addEventListener("popstate", route);
   document.addEventListener("click", onNavClick);

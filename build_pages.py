@@ -27,11 +27,15 @@ import html
 import json
 import pathlib
 import re
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).parent
 SITE_URL = "https://haotianfang.com"
 SITE_NAME = "Haotian Fang"
+
+# gitignored: the records of posts written locally and never committed
+LOCAL_POSTS = "posts.local.json"
 
 # the learning map: manifest at the root, notes one directory down
 MAP_FILE = "learning.json"
@@ -218,14 +222,40 @@ def load_map():
     return nodes, edges
 
 
+def not_ignored(paths):
+    """Of `paths`, the ones git would still commit — tracked, or not matched by .gitignore.
+    A local-only post exists to stay out of the repo; one missing .gitignore line puts
+    it on the live site with the next `git add .`, so name it at build time."""
+    try:
+        out = subprocess.run(["git", "check-ignore", *paths], cwd=ROOT,
+                             capture_output=True, text=True).stdout
+    except OSError:
+        return []
+    ignored = set(out.splitlines())
+    return [p for p in paths if p not in ignored]
+
+
 def main() -> int:
     posts = json.loads((ROOT / "posts.json").read_text(encoding="utf-8"))
+    local = []
+    if (ROOT / LOCAL_POSTS).exists():
+        local = json.loads((ROOT / LOCAL_POSTS).read_text(encoding="utf-8"))
+        paths = [LOCAL_POSTS]
+        for p in local:
+            paths += [p.get("file", f"posts/{p['slug']}.md"), f"{p['slug']}.html"]
+        if any(p["slug"] == MAP_SLUG for p in local):
+            paths.append(MAP_FILE)
+        for path in not_ignored(paths):
+            print(f"  ! {path} is local-only but not gitignored — it would be committed")
+        posts = posts + local
     wanted = set()
 
     for p in posts:
         slug = p["slug"]
         if slug in RESERVED:
             die(f"slug {slug!r} collides with a real path in the repo")
+        if slug in wanted:
+            die(f"slug {slug!r} is listed twice (posts.json and {LOCAL_POSTS} together)")
         wanted.add(slug)
         (ROOT / f"{slug}.html").write_text(
             page(p, slug, f"{SITE_URL}/{slug}", p.get("file", f"posts/{slug}.md"),
