@@ -1455,7 +1455,9 @@ function renderMarkdown(md) {
   html = html.replace(/(<img\b[^>]*?\ssrc=")(?!\/|https?:|data:)/g, "$1/");
   // 8) name where an outward link goes, and stop it reading as emphasis
   html = nameSources(html);
-  // 9) restore math via KaTeX
+  // 9) give each right-to-left run its own direction
+  html = isolateRtl(html);
+  // 10) restore math via KaTeX
   html = html.replace(/@@M(\d+)@@/g, (_, i) => {
     const { display, tex } = math[i];
     if (typeof katex === "undefined") return esc((display ? "$$" : "$") + tex + (display ? "$$" : "$"));
@@ -1463,6 +1465,19 @@ function renderMarkdown(md) {
     catch (e) { return esc((display ? "$$" : "$") + tex + (display ? "$$" : "$")); }
   });
   return html;
+}
+
+/* A Persian or Arabic phrase in a left-to-right line is laid out against the line's
+   direction, and the neutral marks at its edges go with the line, not the phrase:
+   `سعدی شیرازی «گلستان»` put its closing » at the far end, beside the author. <bdi>
+   gives each run its own direction. Text between tags only, never inside one; the
+   text itself is unchanged, so blame's textContent keys still match. */
+const RTL = "\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF";
+const RTL_RUN = new RegExp(`[«(]?[${RTL}](?:[${RTL}\\s\u200C«»،؛؟!.:()-]*[${RTL}»)؟!])?`, "g");
+
+function isolateRtl(html) {
+  return html.replace(/(^|>)([^<]+)/g, (_, gt, text) =>
+    gt + text.replace(RTL_RUN, run => "<bdi>" + run + "</bdi>"));
 }
 
 /* footnotes — marked v12 has no footnote extension, so do it here.

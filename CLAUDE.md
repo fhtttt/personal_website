@@ -332,6 +332,11 @@ and anything the site wants to show differently is a rendering concern, handled 
   about where it led. The chip is `user-select: none`, so copying a line gives the work's
   name and not the word YouTube. Wikilinks, footnote back-links and root-relative in-app
   links are all skipped — touching the last of those would break `onNavClick`'s routing.
+- **Right-to-left text**: every Persian or Arabic run is wrapped in `<bdi>` by
+  `isolateRtl()`. Without it the neutral marks at a run's edge belong to the surrounding
+  left-to-right line: `سعدی شیرازی «گلستان»` rendered its closing `»` beside the author.
+  The code-point ranges in `RTL` are escapes, not literal characters — several range ends
+  are invisible (U+FEFF, U+200C), and an edit tool once wrote them in as raw bytes.
 
 ## Browser floor: no regex lookbehind in `assets/app.js`
 
