@@ -32,6 +32,7 @@ tags:
 
 
 ## Papers
+- [Exokernel: An Operating System Architecture for Application-Level Resource Management](https://doi.org/10.1145/224056.224076)
 
 
 
