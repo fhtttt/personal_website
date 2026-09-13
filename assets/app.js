@@ -263,9 +263,7 @@ function renderHome() {
         <div class="item">
           <div class="yrs">Age 25</div>
           <div class="body">
-            <p class="deg">1. Reason is always post hoc.</p>
-            <p class="deg">2. Learning is about dictation and rote memorization.</p>
-            <p class="deg">3. To see no difference among lives is to treat them with indifference.</p>
+            <p class="deg">To see no difference among lives is to treat them with indifference.</p>
           </div>
         </div>
       </div>
