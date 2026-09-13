@@ -195,8 +195,6 @@ function renderHome() {
       <span class="name">${esc(SITE.name)}</span>
     </div>
     <div class="bio">
-      <p>An architect of complex systems</p>
-      <p>A theorist who insists on interpretability</p>
       <p class="tc">一個廿一世紀的楚地巫史</p>
     </div>
     <p class="links">
