@@ -392,6 +392,22 @@ post from someone browsing the site; it does not make it private.**
   through the index. An indexable note under an unlisted map is unlisted in name only.
 - It is filing, not content: a `site:` commit, and **it does not bump `updated:`**.
 
+## Local-only posts — `posts.local.json`
+
+On 2026-09-13 the user set this: **a post hidden from the site is not committed at all.**
+It is written locally and never enters git. `A Commonplace Book` and the `Learning Map`
+(with `learning.json` and every note under `posts/learning/`) were taken out that day.
+
+- Their records live in `posts.local.json`, gitignored, same shape as `posts.json`.
+  `build_pages.py` merges it; `app.js` asks for it only over http, i.e. a local preview —
+  the live site is https and never requests it.
+- Every file of such a post — its `.md`, its generated `<slug>.html`, and for the map
+  `learning.json`, `posts/learning/*` and `learning/` — needs a line in `.gitignore`.
+  `build_pages.py` names any that git would still commit. Never `git add -f` them.
+- Taking a post local stops it being served; it retracts nothing. Its earlier commits
+  stay public on github.com, and *Published history is append-only* still holds.
+- While the map is local there are no `map:` or `post(learning/…)` commits.
+
 ## When adding/maintaining a post (what I = Claude do)
 
 1. Write `posts/<slug>.md` with frontmatter on top:
