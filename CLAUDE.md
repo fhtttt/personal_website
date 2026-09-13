@@ -361,12 +361,12 @@ Always `grep -a` on `app.js`, and distrust any empty grep over it. Do not swap t
 placeholder for a printable character to make grep behave — it has to be a byte that
 cannot occur in a post, which is the whole reason NUL was chosen.
 
-## Categories (fixed four, do not add new ones)
+## Categories (fixed three, do not add new ones)
 
-`Information Theory` · `Complex System` · `History of Philosophy` · `Others`
+`Information Theory` · `History of Philosophy` · `Others`
 
 Order and exact strings are defined by `CATS` at the top of `assets/app.js`. A post's
-`category` must equal one of them exactly. Anything not in the first three goes to `Others`.
+`category` must equal one of them exactly. Anything not in the first two goes to `Others`.
 
 ## Unlisted posts — `"unlisted": true` in `posts.json`
 
@@ -414,7 +414,7 @@ It is written locally and never enters git. `A Commonplace Book` and the `Learni
    ```yaml
    ---
    title: <title>
-   category: <one of the four categories>
+   category: <one of the three categories>
    created: <YYYY-MM-DD>
    updated: <YYYY-MM-DD>
    summary: <one line, used in list + search>

@@ -6,7 +6,7 @@ const SITE = {
 };
 
 /* fixed category order + labels (must match `category` in posts.json) */
-const CATS = ["Information Theory", "Complex System", "History of Philosophy", "Others"];
+const CATS = ["Information Theory", "History of Philosophy", "Others"];
 
 /* four corner quotes: tl, tr, bl, br (row-major) */
 const QUOTES = [
