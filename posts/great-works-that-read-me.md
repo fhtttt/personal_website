@@ -2,7 +2,7 @@
 title: Great Works That Read Me
 category: Others
 created: 2026-08-03
-updated: 2026-09-13
+updated: 2026-09-16
 summary: A running record of the books, lectures, films and TV series, poems, songs, essays and papers that read my life seriously.
 tags:
   - recommendation
@@ -25,6 +25,7 @@ tags:
 - 李商隱《無題·相見時難別亦難》
 - سعدی شیرازی «گلستان»
 - 薛凱琪《給十年後的我》
+- حافظ شیرازی «تنت به ناز طبیبان نیازمند مباد»
 
 
 ## Blog posts, essays and articles
