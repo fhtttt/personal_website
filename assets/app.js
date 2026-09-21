@@ -189,20 +189,24 @@ function routable(href) {
 function renderHome() {
   document.title = SITE.enName;
   document.body.classList.remove("post");
+  /* data-nosnippet: Google builds the home snippet from whichever rendered text it likes
+     best (it once took the degree list), so every block but the creed opts out and the
+     creed + meta description are all that is left to quote. Only span/div/section may
+     carry it, hence the span around the LinkedIn link. */
   app.innerHTML = `
-    <div class="namewrap">
+    <div class="namewrap" data-nosnippet>
       <span class="pinyin">${esc(SITE.pinyin)}</span>
       <span class="name">${esc(SITE.name)}</span>
     </div>
-    <div class="bio">
+    <div class="bio" data-nosnippet>
       <p class="tc">一個廿一世紀的楚地巫史</p>
     </div>
     <p class="links">
-      <a href="https://www.linkedin.com/in/haotian-fang-354933254/" target="_blank" rel="noopener">LinkedIn</a>
+      <span data-nosnippet><a href="https://www.linkedin.com/in/haotian-fang-354933254/" target="_blank" rel="noopener">LinkedIn</a></span>
     </p>
     <p class="creed">I study how to be a good listener.</p>
 
-    <section class="section">
+    <section class="section" data-nosnippet>
       <h2>La tour d’ivoire avant midi</h2>
       <div class="acad">
         <div class="item">
@@ -223,7 +227,7 @@ function renderHome() {
       <p class="sec-contact">haotian.fang@epfl.ch</p>
     </section>
 
-    <section class="section">
+    <section class="section" data-nosnippet>
       <h2>Uncorrelated bets on the world</h2>
       <div class="acad">
         <div class="item">
@@ -237,7 +241,7 @@ function renderHome() {
       </div>
     </section>
 
-    <section class="section">
+    <section class="section" data-nosnippet>
       <h2>Selected contexts for public sphere</h2>
       <div class="controls">
         <input id="search" type="search" placeholder="Search…" value="${esc(state.query)}" autocomplete="off">
@@ -251,7 +255,7 @@ function renderHome() {
 
     ${renderEpigraphs()}
 
-    <section class="section">
+    <section class="section" data-nosnippet>
       <h2>What came through</h2>
       <div class="acad epiph">
         <div class="item">
@@ -269,7 +273,7 @@ function renderHome() {
       </div>
     </section>
 
-    <div class="footer">© <span id="yr"></span> ${esc(SITE.enName)}</div>
+    <div class="footer" data-nosnippet>© <span id="yr"></span> ${esc(SITE.enName)}</div>
   `;
 
   document.getElementById("yr").textContent = new Date().getFullYear();
@@ -327,7 +331,7 @@ function renderEpigraphs() {
           <figcaption>奈須きのこ『魔法使いの夜』</figcaption>
         </figure>`;
   return `
-    <section class="section epigraphs">
+    <section class="section epigraphs" data-nosnippet>
       <h2>A borrowed peep-show of the interior</h2>
       <div class="epi-col">
         ${cell(byLang("zh"))}
