@@ -240,6 +240,20 @@ function renderHome() {
     </section>
 
     <section class="section" data-nosnippet>
+      <h2>Selected contexts for public sphere</h2>
+      <div class="controls">
+        <input id="search" type="search" placeholder="Search…" value="${esc(state.query)}" autocomplete="off">
+        <div class="cats">
+          <button class="cat ${state.cat === "all" ? "active" : ""}" data-cat="all">All</button>
+          ${CATS.map(c => `<button class="cat ${state.cat === c ? "active" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}
+        </div>
+      </div>
+      <div id="list"></div>
+    </section>
+
+    ${renderEpigraphs()}
+
+    <section class="section" data-nosnippet>
       <h2>A listener’s diet</h2>
       <div class="acad">
         <div class="item">
@@ -272,20 +286,6 @@ function renderHome() {
         </div>
       </div>
     </section>
-
-    <section class="section" data-nosnippet>
-      <h2>Selected contexts for public sphere</h2>
-      <div class="controls">
-        <input id="search" type="search" placeholder="Search…" value="${esc(state.query)}" autocomplete="off">
-        <div class="cats">
-          <button class="cat ${state.cat === "all" ? "active" : ""}" data-cat="all">All</button>
-          ${CATS.map(c => `<button class="cat ${state.cat === c ? "active" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}
-        </div>
-      </div>
-      <div id="list"></div>
-    </section>
-
-    ${renderEpigraphs()}
 
     <section class="section" data-nosnippet>
       <h2>What came through</h2>
