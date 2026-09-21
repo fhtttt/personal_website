@@ -255,6 +255,7 @@ function renderHome() {
 
     <section class="section" data-nosnippet>
       <h2>A listener’s diet</h2>
+      <p class="sec-sub">for listening closely to the beautiful lives embraced along the way</p>
       <div class="acad">
         <div class="item">
           <div class="yrs" title="Tea">🍵</div>

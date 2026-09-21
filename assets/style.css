@@ -199,6 +199,8 @@ mark {
 
 /* contact email — plain muted text */
 .sec-contact { margin: 18px 0 0; font-size: 14.5px; color: var(--muted); }
+/* a section's one-line subtitle, sitting between the heading rule and the first row */
+.sec-sub { margin: 14px 0 6px; font-size: 14.5px; color: var(--muted); }
 
 /* ---- article ---- */
 .back { display: inline-block; font-size: 14px; color: var(--muted); margin-bottom: 28px; }
