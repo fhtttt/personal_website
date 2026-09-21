@@ -280,7 +280,7 @@ function renderHome() {
         <div class="item">
           <div class="yrs" title="Groceries">🛒</div>
           <div class="body">
-            <p class="deg">Spanish · Korean · Arabic · Hebrew · Thai · Portuguese · Norwegian</p>
+            <p class="deg">Spanish · Korean · Arabic · Hebrew · Thai · Portuguese · Norwegian · Turkish</p>
             <p class="sub">ingredients still to be shopped for</p>
           </div>
         </div>
