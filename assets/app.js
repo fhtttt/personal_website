@@ -242,6 +242,40 @@ function renderHome() {
     </section>
 
     <section class="section" data-nosnippet>
+      <h2>A listener’s diet</h2>
+      <div class="acad">
+        <div class="item">
+          <div class="yrs" title="Tea">🍵</div>
+          <div class="body">
+            <p class="deg">Mandarin · English</p>
+            <p class="sub">listened to as fluently as tea is drunk</p>
+          </div>
+        </div>
+        <div class="item">
+          <div class="yrs" title="Rice">🍚</div>
+          <div class="body">
+            <p class="deg">Cantonese</p>
+            <p class="sub">listened to every day, as rice is eaten</p>
+          </div>
+        </div>
+        <div class="item">
+          <div class="yrs" title="Oil &amp; sugar">🍩</div>
+          <div class="body">
+            <p class="deg">French · Farsi · Italian · German · Russian · Japanese</p>
+            <p class="sub">listened to now, the high-oil, high-sugar way</p>
+          </div>
+        </div>
+        <div class="item">
+          <div class="yrs" title="Groceries">🛒</div>
+          <div class="body">
+            <p class="deg">Spanish · Korean · Arabic · Hebrew · Thai · Portuguese · Norwegian</p>
+            <p class="sub">ingredients still to be shopped for</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" data-nosnippet>
       <h2>Selected contexts for public sphere</h2>
       <div class="controls">
         <input id="search" type="search" placeholder="Search…" value="${esc(state.query)}" autocomplete="off">
