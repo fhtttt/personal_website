@@ -197,7 +197,7 @@ function renderHome() {
       <span class="name">${esc(SITE.name)}</span>
     </div>
     <div class="bio" data-nosnippet>
-      <p class="tc">一個廿一世紀的楚地巫史</p>
+      <p class="tc">佢份人，廿一世紀嘅楚地巫史。</p>
     </div>
     <p class="links">
       <span data-nosnippet><a href="https://www.linkedin.com/in/haotian-fang-354933254/" target="_blank" rel="noopener">LinkedIn</a></span>
