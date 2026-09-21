@@ -281,7 +281,7 @@ function renderHome() {
         <div class="item">
           <div class="yrs" title="Seeds">🌱</div>
           <div class="body">
-            <p class="deg">Spanish · Korean · Arabic · Hebrew · Thai · Portuguese · Norwegian · Turkish · Greek · Suzhou&nbsp;Wu · Chinese&nbsp;National&nbsp;Sign&nbsp;Language</p>
+            <p class="deg">Spanish · Korean · Arabic · Hebrew · Thai · Portuguese · Norwegian · Turkish · Greek · Suzhou&nbsp;Wu · Chinese&nbsp;National&nbsp;Sign&nbsp;Language · Hindi · Vietnamese</p>
             <p class="sub">listened to in the future, seeds about to be sown</p>
           </div>
         </div>
