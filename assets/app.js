@@ -254,7 +254,7 @@ function renderHome() {
     ${renderEpigraphs()}
 
     <section class="section" data-nosnippet>
-      <h2>A listener’s diet</h2>
+      <h2>A listener’s modern diet</h2>
       <p class="sec-sub">for listening closely to the beautiful lives embraced along the way</p>
       <div class="acad">
         <div class="item">
@@ -283,6 +283,27 @@ function renderHome() {
           <div class="body">
             <p class="deg">Spanish · Korean · Arabic · Hebrew · Thai · Portuguese · Norwegian · Turkish · Greek · Suzhou&nbsp;Wu · Chinese&nbsp;Sign&nbsp;Language · Hindi · Vietnamese</p>
             <p class="sub">listened to in the future, seeds about to be sown</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" data-nosnippet>
+      <h2>A listener’s bowls, B.C.</h2>
+      <p class="sec-sub">for going back to embrace the beautiful lives lived when the years still counted down</p>
+      <div class="acad">
+        <div class="item">
+          <div class="yrs" title="Bowls">🏺</div>
+          <div class="body">
+            <p class="deg">Ancient&nbsp;Egyptian · Classical&nbsp;Chinese</p>
+            <p class="sub">listening, casting the bowls</p>
+          </div>
+        </div>
+        <div class="item">
+          <div class="yrs" title="Ore">🪨</div>
+          <div class="body">
+            <p class="deg">Akkadian · Sanskrit · Ancient&nbsp;Hebrew · Ancient&nbsp;Greek · Old&nbsp;Persian · Latin</p>
+            <p class="sub">to be listening, the ore still in the ground</p>
           </div>
         </div>
       </div>
