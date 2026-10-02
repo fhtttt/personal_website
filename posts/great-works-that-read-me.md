@@ -2,7 +2,7 @@
 title: Great Works That Read Me
 category: Others
 created: 2026-08-03
-updated: 2026-09-16
+updated: 2026-10-02
 summary: A running record of the books, lectures, films and TV series, poems, songs, essays and papers that read my life seriously.
 tags:
   - recommendation
@@ -26,6 +26,7 @@ tags:
 - سعدی شیرازی «گلستان»
 - 薛凱琪《給十年後的我》
 - حافظ شیرازی «تنت به ناز طبیبان نیازمند مباد»
+- نیما یوشیج «می‌تراود مهتاب»
 
 
 ## Blog posts, essays and articles
