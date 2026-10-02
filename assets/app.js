@@ -274,14 +274,14 @@ function renderHome() {
         <div class="item">
           <div class="yrs" title="Oil &amp; sugar">🍩</div>
           <div class="body">
-            <p class="deg">French · Farsi · Italian · German · Russian · Japanese</p>
+            <p class="deg">French · Farsi · Italian · German · Russian · Japanese · Spanish · Chinese&nbsp;Sign&nbsp;Language</p>
             <p class="sub">listened to now, the high-oil, high-sugar way</p>
           </div>
         </div>
         <div class="item">
           <div class="yrs" title="Seeds">🌱</div>
           <div class="body">
-            <p class="deg">Spanish · Korean · Arabic · Hebrew · Thai · Portuguese · Norwegian · Turkish · Greek · Suzhou&nbsp;Wu · Chinese&nbsp;Sign&nbsp;Language · Hindi · Vietnamese · Indonesian</p>
+            <p class="deg">Korean · Arabic · Hebrew · Thai · Portuguese · Norwegian · Turkish · Greek · Suzhou&nbsp;Wu · Hindi · Vietnamese · Indonesian</p>
             <p class="sub">listened to in the future, seeds about to be sown</p>
           </div>
         </div>
