@@ -48,5 +48,6 @@ tags:
 - Georg Lukács, *Die Theorie des Romans*
 - Alexis de Tocqueville, *L'Ancien Régime et la Révolution*
 - Karl Marx, *Zur Kritik der Hegelschen Rechtsphilosophie. Einleitung*
+- Fredric Jameson, *The Antinomies of Realism*
 
 
