@@ -52,5 +52,6 @@ tags:
 - Jorge Luis Borges, *Funes el memorioso*
 - M. H. Abrams, *Natural Supernaturalism: Tradition and Revolution in Romantic Literature*
 - Ferdinand Tönnies, *Gemeinschaft und Gesellschaft*
+- Friedrich Nietzsche, *Vom Nutzen und Nachteil der Historie für das Leben*
 
 
