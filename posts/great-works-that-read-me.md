@@ -53,5 +53,6 @@ tags:
 - M. H. Abrams, *Natural Supernaturalism: Tradition and Revolution in Romantic Literature*
 - Ferdinand Tönnies, *Gemeinschaft und Gesellschaft*
 - Friedrich Nietzsche, *Vom Nutzen und Nachteil der Historie für das Leben*
+- Paul de Man, *Blindness and Insight: Essays in the Rhetoric of Contemporary Criticism*
 
 
