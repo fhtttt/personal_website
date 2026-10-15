@@ -45,5 +45,6 @@ tags:
 ## Waiting to be read
 - Rita Felski, *The Limits of Critique*
 - Terry Eagleton, *Literary Theory: An Introduction*
+- Georg Lukács, *Die Theorie des Romans*
 
 
