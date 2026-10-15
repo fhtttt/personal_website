@@ -337,6 +337,9 @@ and anything the site wants to show differently is a rendering concern, handled 
   left-to-right line: `سعدی شیرازی «گلستان»` rendered its closing `»` beside the author.
   The code-point ranges in `RTL` are escapes, not literal characters — several range ends
   are invisible (U+FEFF, U+200C), and an edit tool once wrote them in as raw bytes.
+  The History panel's subjects, *why* bodies and readings never pass through
+  `renderMarkdown()`, so they call `isolateRtl()` themselves; anything new that prints a
+  commit message or a reading needs the same, or its guillemets land beside the author.
 
 ## Browser floor: no regex lookbehind in `assets/app.js`
 

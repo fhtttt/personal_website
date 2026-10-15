@@ -1024,7 +1024,7 @@ async function renderHistory(slug, files) {
       ${revs.map((r, i) => `
         <li><button class="rev-item" data-rev="${i}">
           <span class="rev-date">${esc(r.date)}</span>
-          <span class="rev-sub">${esc(r.subject)}</span>
+          <span class="rev-sub">${isolateRtl(esc(r.subject))}</span>
           ${r.notes.length ? `<span class="rev-badge">${r.notes.length} reading${r.notes.length > 1 ? "s" : ""}</span>` : ""}
         </button></li>`).join("")}
     </ol>
@@ -1207,11 +1207,11 @@ async function openRev(i) {
       <a class="rev-sha" href="https://github.com/${REPO}/commit/${esc(r.sha)}" target="_blank" rel="noopener">${esc(r.sha.slice(0, 7))}</a>
       <button class="rev-close" aria-label="Close">×</button>
     </div>
-    <h3>${esc(r.subject)}</h3>
-    ${r.why ? `<div class="rev-block"><h4>Why</h4><div class="rev-why">${nl(r.why)}</div></div>` : ""}`;
+    <h3>${isolateRtl(esc(r.subject))}</h3>
+    ${r.why ? `<div class="rev-block"><h4>Why</h4><div class="rev-why">${isolateRtl(nl(r.why))}</div></div>` : ""}`;
   const tail = r.notes.length ? `
     <div class="rev-block"><h4>Readings</h4>
-      ${r.notes.map(n => `<div class="note"><span class="note-date">${esc(n.date)}</span><div class="note-body">${marked.parseInline(String(n.note || ""))}</div></div>`).join("")}
+      ${r.notes.map(n => `<div class="note"><span class="note-date">${esc(n.date)}</span><div class="note-body">${isolateRtl(marked.parseInline(String(n.note || "")))}</div></div>`).join("")}
     </div>` : "";
 
   /* No "what changed" block: the change is shown on the article itself, below. What
