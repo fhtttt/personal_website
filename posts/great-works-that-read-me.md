@@ -51,5 +51,6 @@ tags:
 - Fredric Jameson, *The Antinomies of Realism*
 - Jorge Luis Borges, *Funes el memorioso*
 - M. H. Abrams, *Natural Supernaturalism: Tradition and Revolution in Romantic Literature*
+- Ferdinand Tönnies, *Gemeinschaft und Gesellschaft*
 
 
