@@ -2,7 +2,7 @@
 title: Great Works That Read Me
 category: Others
 created: 2026-08-03
-updated: 2026-10-02
+updated: 2026-10-15
 summary: A running record of the books, lectures, films and TV series, poems, songs, essays and papers that read my life seriously.
 tags:
   - recommendation
@@ -39,5 +39,9 @@ tags:
 
 
 ## Others
+
+
+
+## Waiting to be read
 
 
