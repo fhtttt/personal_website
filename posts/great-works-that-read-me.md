@@ -55,5 +55,6 @@ tags:
 - Friedrich Nietzsche, *Vom Nutzen und Nachteil der Historie für das Leben*
 - Paul de Man, *Blindness and Insight: Essays in the Rhetoric of Contemporary Criticism*
 - 杨乃乔《凯撒的归凯撒，上帝的归上帝》
+- Erich Auerbach, *Philologie der Weltliteratur*
 
 
