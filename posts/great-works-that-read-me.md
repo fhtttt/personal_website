@@ -49,5 +49,6 @@ tags:
 - Alexis de Tocqueville, *L'Ancien Régime et la Révolution*
 - Karl Marx, *Zur Kritik der Hegelschen Rechtsphilosophie. Einleitung*
 - Fredric Jameson, *The Antinomies of Realism*
+- Jorge Luis Borges, *Funes el memorioso*
 
 
