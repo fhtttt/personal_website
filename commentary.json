@@ -1,3 +1,6 @@
 {
-  "_readme": "史論 layer, kept apart from the record. Keys are post slugs; each entry pins a dated reading to a commit of posts/<slug>.md, as { \"sha\": \"<prefix>\", \"date\": \"YYYY-MM-DD\", \"note\": \"inline markdown\" }. A commit may carry any number of notes — that is the point: the same change reread at ten years' distance is a second document, not a correction of the first. Never edit an old note; add a new one."
+  "_readme": "史論 layer, kept apart from the record. Keys are post slugs; each entry pins a dated reading to a commit of posts/<slug>.md, as { \"sha\": \"<prefix>\", \"date\": \"YYYY-MM-DD\", \"note\": \"inline markdown\" }. A commit may carry any number of notes — that is the point: the same change reread at ten years' distance is a second document, not a correction of the first. Never edit an old note; add a new one.",
+  "great-works-that-read-me": [
+    { "sha": "334f015", "date": "2026-10-18", "note": "要理解大革命的功绩我们需要回到旧制度，看一看其是如何孕生的，而不是略过那个旧时代" }
+  ]
 }
