@@ -58,5 +58,6 @@ tags:
 - Erich Auerbach, *Philologie der Weltliteratur*
 - Victor Hugo, *Quatre-vingt-treize*
 - William Faulkner, *A Rose for Emily*
+- Ernst Bloch, *Ungleichzeitigkeit und Pflicht zu ihrer Dialektik*
 
 
