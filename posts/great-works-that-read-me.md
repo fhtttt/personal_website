@@ -2,7 +2,7 @@
 title: Great Works That Read Me
 category: Others
 created: 2026-08-03
-updated: 2026-10-15
+updated: 2026-10-18
 summary: A running record of the books, lectures, films and TV series, poems, songs, essays and papers that read my life seriously.
 tags:
   - recommendation
@@ -56,5 +56,6 @@ tags:
 - Paul de Man, *Blindness and Insight: Essays in the Rhetoric of Contemporary Criticism*
 - 杨乃乔《凯撒的归凯撒，上帝的归上帝》
 - Erich Auerbach, *Philologie der Weltliteratur*
+- Victor Hugo, *Quatre-vingt-treize*
 
 
