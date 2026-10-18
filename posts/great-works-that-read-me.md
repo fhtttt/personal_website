@@ -59,5 +59,6 @@ tags:
 - Victor Hugo, *Quatre-vingt-treize*
 - William Faulkner, *A Rose for Emily*
 - Ernst Bloch, *Ungleichzeitigkeit und Pflicht zu ihrer Dialektik*
+- Benedict Anderson, *Imagined Communities: Reflections on the Origin and Spread of Nationalism*
 
 
