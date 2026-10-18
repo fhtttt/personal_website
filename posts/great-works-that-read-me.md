@@ -57,5 +57,6 @@ tags:
 - 杨乃乔《凯撒的归凯撒，上帝的归上帝》
 - Erich Auerbach, *Philologie der Weltliteratur*
 - Victor Hugo, *Quatre-vingt-treize*
+- William Faulkner, *A Rose for Emily*
 
 
