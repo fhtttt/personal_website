@@ -395,7 +395,7 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
 }
 .revs { list-style: none; margin: 0; padding: 0; }
 .rev-item {
-  display: block; width: 100%; text-align: left;
+  position: relative; display: block; width: 100%; text-align: left;
   padding: 9px 0; font: inherit; color: var(--fg);
   background: none; border: none; border-bottom: 1px solid var(--line);
   cursor: pointer;
@@ -403,7 +403,12 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
 .rev-item:hover .rev-sub { color: var(--accent); }
 .rev-item:focus { outline: none; }
 .rev-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.rev-item.active { padding-left: 11px; margin-left: -12px; border-left: 2px solid var(--accent); }
+/* The bar hangs in the gutter, outside the item's box, so the item keeps its width and
+   its text stays put. The wide-screen rail scrolls, so it pads itself to keep it in view. */
+.rev-item.active::before {
+  content: ""; position: absolute; left: -12px; top: 0; bottom: 0;
+  width: 2px; background: var(--accent);
+}
 .rev-item.active .rev-sub { color: var(--accent); }
 .rev-item .rev-date {
   display: block; font-size: 12.5px; color: var(--muted);
@@ -526,6 +531,7 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
     margin-top: 0;
     position: sticky; top: 40px;
     max-height: calc(100vh - 80px); overflow-y: auto;
+    padding-left: 12px; margin-left: -12px;   /* room for .rev-item.active::before */
   }
 }
 
