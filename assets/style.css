@@ -7,6 +7,7 @@
   --aoko: #1f5fc0;        /* 蒼崎青子の青 */
   --code-bg: #f6f6f4;
   --maxw: 880px;
+  --side: 32px;           /* #app's side padding; the epigraph strip reaches out into it */
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -34,7 +35,7 @@ body {
 #app {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 64px 32px 100px;
+  padding: 64px var(--side) 100px;
 }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -152,16 +153,27 @@ a:hover { text-decoration: underline; }
 .empty { color: var(--muted); padding: 12px 0; }
 
 /* pager */
-.pager { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 30px; }
+.pager { display: flex; align-items: center; justify-content: center; margin-top: 30px; }
+.pager[hidden] { display: none; }   /* the display above would otherwise outrank the attribute */
+/* margins, not flex gap: Safari 14.0-14.4 has none, and the arrows would touch the count */
+.pager > * + * { margin-left: 18px; }
 .pg {
   font: inherit; font-size: 20px; line-height: 1;
   width: 36px; height: 36px;
   display: flex; align-items: center; justify-content: center;
   color: var(--fg); background: var(--bg);
   border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+  touch-action: manipulation;   /* a quick second tap is the next page, not a zoom */
 }
-.pg:hover:not(:disabled) { border-color: var(--muted); color: var(--accent); }
-.pg:disabled { opacity: .3; cursor: default; }
+/* only where something really hovers: a phone keeps :hover on the last button tapped, and the
+   epigraph pager's buttons outlive the tap (the post list redraws its own), so › stayed red */
+@media (hover: hover) {
+  .pg:hover:not(:disabled):not([aria-disabled="true"]) { border-color: var(--muted); color: var(--accent); }
+}
+/* the epigraph pager marks its ends aria-disabled rather than disabled (see bindEpigraphs) */
+.pg:disabled, .pg[aria-disabled="true"] { opacity: .3; cursor: default; }
+/* an end that holds the keyboard focus: opacity would fade the focus ring with the button */
+.pg[aria-disabled="true"]:focus-visible { opacity: 1; color: var(--muted); }
 .pg-info { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 mark {
@@ -535,17 +547,48 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
   }
 }
 
-/* ---- epigraphs: 錦瑟 · 波斯 · Dillard · 魔法使いの夜 ---- */
-.epigraphs {
-  margin-top: 104px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  align-items: start;
+/* ---- epigraphs: 錦瑟 · 魔法使いの夜 · Dillard · 波斯, then Auerbach ----
+   Read a page at a time: pages of four, two columns of two, side by side in one strip that
+   the browser scrolls sideways and snaps a page at a time. Turning a page is the browser's
+   own scrolling, so a trackpad swipe, a finger, find-in-page and Tab need no help from
+   app.js, which keeps the pager in step and stops Safari reading a swipe at either end as
+   Back (bindEpigraphs). A phone turns one quote at a time (the 640px block below). */
+.epigraphs { margin-top: 104px; --epi-air: 12px; }
+/* The strip reaches out into #app's side padding and every page carries that padding back,
+   so a page at rest sits exactly on the text column, and a page in motion slides on to the
+   window's edge instead of being sliced off at the column's. --epi-air does the same above
+   and below: the strip clips whatever overflows it, so this keeps a citation's underline, a
+   focus ring and the Nastaliq's ink clear of the clip, and the negative margins take the
+   room back so no line moves. On a wide screen the strip is as tall as its tallest page: a
+   shorter page leaves room under it rather than pulling the pager, and the section below,
+   up from under the pointer. */
+.epi-track {
+  display: flex;
+  align-items: flex-start;            /* each stop keeps its own height; a phone measures it */
+  margin: calc(40px - var(--epi-air)) calc(-1 * var(--side)) calc(-1 * var(--epi-air));
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;     /* a swipe on past either end is not Back; Safari ignores it (bindEpigraphs) */
+  scrollbar-width: none;              /* the pager is the control, not a bar under the quotes */
 }
-.epigraphs > h2 { grid-column: 1 / -1; }   /* section title spans both columns */
-.epi-col { display: flex; flex-direction: column; gap: 56px; min-width: 0; }
+.epi-track::-webkit-scrollbar { display: none; }
+.epi-page {
+  flex: 0 0 100%;
+  min-width: 0;                       /* exactly one strip wide: app.js reads the stop off that */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 40px;
+  align-items: start;
+  padding: var(--epi-air) var(--side);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;           /* one swipe, one page, however hard the fling (Safari 15+; 14 lets it run on) */
+}
+.epi-col { min-width: 0; }
 .epi { margin: 0; min-width: 0; }
+/* a margin, not the column's flex gap: Safari 14.0-14.4 has none, and two quotes would touch */
+.epi + .epi { margin-top: 56px; }
+.epi-pager { margin-top: 40px; }
 .epi blockquote { margin: 0 0 12px; font-size: 15px; line-height: 1.85; color: var(--fg); overflow-wrap: anywhere; }
 .epi figcaption { font-size: 12.5px; color: var(--muted); letter-spacing: .01em; }
 .epi figcaption a { color: inherit; text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 1px; }
@@ -581,9 +624,28 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
 .epi-ja .usu  { color: var(--fg); }     /* 久遠寺有珠 */
 
 @media (max-width: 640px) {
-  .epigraphs { grid-template-columns: minmax(0, 1fr); gap: 48px; }
-  .epi-col { min-width: 0; }
+  /* A phone turns one quote at a time. The pages and columns step out of the box tree, and
+     every quote is a stop of the strip in its own right; display: contents is safe on these
+     two only because they are bare divs (older WebKit drops the role of an element set to
+     contents, and they have none to lose). The quotes run from four lines to sixteen, so here
+     the strip takes the height of the one showing (bindEpigraphs), once a swipe has settled.
+     That is why the pager moves up between the heading and the strip: under it, every turn
+     carried the pager off by the difference, and a second tap on › landed on the quote. It
+     stays after the strip in the markup, so Tab still reaches the quotes first. */
+  .epigraphs { display: flex; flex-direction: column; }
+  .epi-pager { margin-top: 24px; }   /* as far under its heading as the post list's controls */
+  .epi-track { order: 1; margin-top: calc(32px - var(--epi-air)); transition: height .25s ease; }
+  .epi-page, .epi-col { display: contents; }
+  .epi {
+    flex: 0 0 100%;
+    padding: var(--epi-air) var(--side);
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  .epi + .epi { margin-top: 0; }
   .epi-en blockquote { max-width: none; }
+}
+@media (max-width: 640px) {
   /* 小屏：日语从竖排改横排，随宽度换行，避免超出视口造成横向滚动/右侧被切 */
   .epi-ja { align-items: stretch; }
   .epi-ja .bl-body {
@@ -595,16 +657,21 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
   .epi-ja .bl-sm { line-height: 1.85; }
   .epi-ja .bl-lg { line-height: 1.95; }
 }
+@media (prefers-reduced-motion: reduce) {
+  .epi-track { transition: none; }
+}
 
 .footer { margin-top: 104px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 
 /* ---- responsive ---- */
 @media (max-width: 820px) {          /* iPad / small laptop */
-  #app { padding: 56px 28px 88px; }
+  :root { --side: 28px; }
+  #app { padding: 56px var(--side) 88px; }
 }
 @media (max-width: 560px) {          /* phone */
+  :root { --side: 20px; }
   body { font-size: 16px; }
-  #app { padding: 40px 20px 72px; }
+  #app { padding: 40px var(--side) 72px; }
   .namewrap .name { font-size: 30px; }
   .namewrap .pinyin { font-size: 12px; letter-spacing: .16em; }
   .section { margin-top: 64px; }

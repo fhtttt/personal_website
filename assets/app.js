@@ -8,10 +8,14 @@ const SITE = {
 /* fixed category order + labels (must match `category` in posts.json) */
 const CATS = ["Information Theory", "History of Philosophy", "Others"];
 
-/* four corner quotes: tl, tr, bl, br (row-major) */
+/* the epigraphs. `id` is the name EPIGRAPH_PAGES below places a quote by, and nothing
+   else places it; `lang` picks its typeface, and `dir: "rtl"` marks a right-to-left script.
+   In a line, `*…*` marks a run the source sets in italic, and `em` names that run's language.
+   A quote in more than one voice gives `parts` instead of `lines`, a paragraph each with the
+   class that sets its voice. `post: "<slug>"` links the citation to that article. */
 const QUOTES = [
   {
-    pos: "tl", lang: "zh",
+    id: "jinse", lang: "zh",
     lines: [
       "錦瑟無端五十弦，一弦一柱思華年。",
       "莊生曉夢迷蝴蝶，望帝春心托杜鵑。",
@@ -22,7 +26,22 @@ const QUOTES = [
     post: "write-your-own-history",
   },
   {
-    pos: "tr", lang: "fa",
+    id: "mahoyo", lang: "ja",
+    parts: [
+      { cls: "bl-sm aoko", lines: ["「私だって鬼じゃないわ。ほら、こっち向いて。おまじない、かけてあげる」"] },
+      { cls: "bl-lg aoko", lines: [
+        "「──空気のおもり、胸のふるえ。",
+        "ひかりは先立つ、かげは遅れる」",
+        "「鳥は空に、魚は海に、貴方は彼方に。",
+        "疑問も不安も鞄の底に、旅路の一歩は曙に。",
+        "輝く星はするりと落ちて、今は貴方の心の内に」",
+      ] },
+      { cls: "bl-sm usu", lines: ["「‥‥‥はあ。そこは“空気のおもり、胸のふるえ。ひかりは遅れる、かげは先立つ”よ。気をつけなさい。それだと逆に落ち着かなくなるわ」"] },
+    ],
+    cite: "奈須きのこ『魔法使いの夜』",
+  },
+  {
+    id: "hafez", lang: "fa", dir: "rtl",
     lines: [
       "تنت به ناز طبیبان نیازمند مباد",
       "وجود نازکت آزرده گزند مباد",
@@ -32,10 +51,26 @@ const QUOTES = [
     cite: "حافظ شیرازی · دیوان",
   },
   {
-    pos: "bl", lang: "en",
+    id: "dillard", lang: "en",
     lines: ["When everything else has gone from my brain — the President’s name, the state capitals, the neighborhoods where I lived, and then my own name and what it was on earth I sought, and then at length the faces of my friends, and finally the faces of my family — when all this has dissolved, what will be left, I believe, is topology: the dreaming memory of land as it lay this way and that."],
     cite: "Annie Dillard · An American Childhood",
   },
+  {
+    id: "auerbach", lang: "de", em: "la",
+    lines: ["*ut discat paulatim exercitatus animus visibilia haec et transitoria primum commutare, ut postmodum possit etiam derelinquere. Delicatus ille est adhuc cui patria dulcis est, fortis autem cui omne solum patria est, perfectus vero cui mundus totus exilium est* … Hugo meinte das für den, dessen Ziel Loslösung von der Liebe zur Welt ist. Doch auch für einen, der die rechte Liebe zur Welt gewinnen will, ist es ein guter Weg."],
+    cite: "Erich Auerbach · Philologie der Weltliteratur",
+  },
+];
+
+/* The epigraphs, a page at a time. A wide screen lays a page out as the two columns the home
+   page has always had - `tl` over `bl` on the left, `tr` over `br` on the right, each column
+   stacked on its own, so a short quote can stand over a long one - and a phone shows the same
+   quotes one at a time, in the order tl, bl, tr, br, then the next page. A corner left out is
+   simply not drawn, and a quote no corner names is not shown: placing a new one is its record
+   in QUOTES and its id in a corner here. */
+const EPIGRAPH_PAGES = [
+  { tl: "jinse", bl: "mahoyo", tr: "dillard", br: "hafez" },
+  { tl: "auerbach" },
 ];
 
 /* the record lives in git; this is where it is read from */
@@ -61,6 +96,7 @@ const PAGE_SIZE = 10;
 const state = {
   posts: [], query: "", cat: "all", page: 0, bodies: bare(), excerpts: bare(), bodiesLoaded: false,
   commentary: null, hist: null,
+  epiAt: 0,   // the epigraph strip's quote to come back to, by its place among the strip's quotes
   map: { nodes: [], edges: [] },
   mapQuery: "", mapBodies: bare(), mapExcerpts: bare(), mapBodiesLoaded: false, mapHits: null,
 };
@@ -344,6 +380,7 @@ function renderHome() {
   );
 
   renderList();
+  bindEpigraphs();
   ensureBodies();   // 后台抓正文，建全文搜索索引
 }
 
@@ -369,33 +406,177 @@ function renderEpigraphs() {
   const cite = q => q.post
     ? `<a data-post="${esc(q.post)}" href="/${encodeURIComponent(q.post)}">${esc(q.cite)}</a>`
     : esc(q.cite);
-  const cell = q => `
-        <figure class="epi epi-${q.lang}" lang="${q.lang}"${q.lang === "fa" ? ' dir="rtl"' : ""}>
-          <blockquote>${q.lines.map(esc).join("<br>")}</blockquote>
-          <figcaption>${cite(q)}</figcaption>
-        </figure>`;
-  const byLang = l => QUOTES.find(q => q.lang === l);
-  const blessing = `
-        <figure class="epi epi-ja" lang="ja">
-          <div class="bl-body">
-            <p class="bl-sm aoko">「私だって鬼じゃないわ。ほら、こっち向いて。おまじない、かけてあげる」</p>
-            <p class="bl-lg aoko">「──空気のおもり、胸のふるえ。<br>ひかりは先立つ、かげは遅れる」<br>「鳥は空に、魚は海に、貴方は彼方に。<br>疑問も不安も鞄の底に、旅路の一歩は曙に。<br>輝く星はするりと落ちて、今は貴方の心の内に」</p>
-            <p class="bl-sm usu">「‥‥‥はあ。そこは“空気のおもり、胸のふるえ。ひかりは遅れる、かげは先立つ”よ。気をつけなさい。それだと逆に落ち着かなくなるわ」</p>
+  const line = q => s => esc(s).replace(/\*([^*]+)\*/g,
+    (_, run) => `<i${q.em ? ` lang="${esc(q.em)}"` : ""}>${run}</i>`);
+  /* a quote in more than one voice is a paragraph per voice; any other is a run of lines */
+  const body = q => q.parts
+    ? `<div class="bl-body">${q.parts.map(p =>
+        `<p class="${esc(p.cls)}">${p.lines.map(line(q)).join("<br>")}</p>`).join("")}</div>`
+    : `<blockquote>${q.lines.map(line(q)).join("<br>")}</blockquote>`;
+  /* an id is whatever was typed into EPIGRAPH_PAGES, so it is looked up in a bare() table:
+     a corner left out, or naming no quote, is simply empty, never a phantom or a TypeError */
+  const byId = bare();
+  QUOTES.forEach(q => { byId[q.id] = q; });
+  const cell = id => {
+    const q = id ? byId[id] : null;
+    return q ? `
+            <figure class="epi epi-${esc(q.lang)}" lang="${esc(q.lang)}"${q.dir ? ` dir="${esc(q.dir)}"` : ""}>
+              ${body(q)}
+              <figcaption>${cite(q)}</figcaption>
+            </figure>` : "";
+  };
+  /* a page with nothing in any corner is no page at all */
+  const pages = EPIGRAPH_PAGES
+    .map(p => [cell(p.tl) + cell(p.bl), cell(p.tr) + cell(p.br)])
+    .filter(c => c[0] || c[1])
+    .map(c => `
+        <div class="epi-page">
+          <div class="epi-col">${c[0]}
           </div>
-          <figcaption>奈須きのこ『魔法使いの夜』</figcaption>
-        </figure>`;
+          <div class="epi-col">${c[1]}
+          </div>
+        </div>`).join("");
+  if (!pages) return "";
+  /* the post list's own pager; bindEpigraphs() writes its count before the first paint */
   return `
     <section class="section epigraphs" data-nosnippet>
       <h2>A borrowed peep-show of the interior</h2>
-      <div class="epi-col">
-        ${cell(byLang("zh"))}
-        ${blessing}
+      <div class="epi-track">${pages}
       </div>
-      <div class="epi-col">
-        ${cell(byLang("en"))}
-        ${cell(byLang("fa"))}
+      <div class="pager epi-pager">
+        <button class="pg" data-step="-1" aria-label="Previous quotes">‹</button>
+        <span class="pg-info"></span>
+        <button class="pg" data-step="1" aria-label="Next quotes">›</button>
       </div>
     </section>`;
+}
+
+/* ---- the epigraph strip ----
+   The pages are one strip that the browser scrolls sideways and snaps a stop at a time, so a
+   trackpad swipe, a finger, shift + wheel, find-in-page and Tab all turn it with no code here.
+   What is left is bookkeeping: which stop is showing (the pager), how tall the strip is on a
+   phone, and keeping the reader on the same quote when a resize or a rotation across 640px
+   turns one page of four into four stops of one - and one guard Safari needs at the strip's
+   two ends. Every listener hangs on an element this render made and goes with it; the one
+   observer is let go when the next home page is drawn, or by itself once its strip has left
+   the page. */
+let epiObserver = null;
+
+function bindEpigraphs() {
+  if (epiObserver) { epiObserver.disconnect(); epiObserver = null; }
+  const track = app.querySelector(".epi-track");
+  if (!track) return;
+  const pager = app.querySelector(".epi-pager");
+  const info = pager.querySelector(".pg-info");
+  const prev = pager.querySelector('[data-step="-1"]');
+  const next = pager.querySelector('[data-step="1"]');
+  const pages = Array.prototype.slice.call(track.children);
+  const figs = Array.prototype.slice.call(track.querySelectorAll(".epi"));
+  const pageOf = figs.map(f => pages.indexOf(f.closest(".epi-page")));
+  let single = false, width = 0, aim = -1, timer = 0, queued = 0;
+
+  /* on a phone the pages and columns are display: contents and every quote is a stop of its
+     own; asking the CSS keeps the 640px breakpoint in style.css alone */
+  const measure = () => { single = getComputedStyle(pages[0]).display === "contents"; };
+  const count = () => (single ? figs.length : pages.length);
+  const stop = i => (single ? figs[i] : pages[i]);
+  /* every stop is exactly one strip wide, so where the strip rests says which one is showing */
+  const index = () => Math.max(0, Math.min(count() - 1, Math.round(track.scrollLeft / (track.clientWidth || 1))));
+  const left = i => stop(i).getBoundingClientRect().left - track.getBoundingClientRect().left + track.scrollLeft;
+  /* a stop is remembered by a quote, which outlives a change of layout: the one the stop opens
+     with, unless it already holds the one remembered. Turn a phone sideways on Hafez and back,
+     and it comes back to Hafez, not to the first quote of Hafez's page. */
+  const stopOf = k => (single ? k : pageOf[k]);
+  const opens = i => (single ? i : pageOf.indexOf(i));
+  /* written only on change: the count is a live region, and every rewrite is announced */
+  const put = (el, name, v) => { if (el.getAttribute(name) !== v) el.setAttribute(name, v); };
+
+  const paint = () => {
+    const n = count(), i = index(), label = (i + 1) + " / " + n;
+    pager.hidden = n < 2;
+    if (info.textContent !== label) info.textContent = label;
+    put(prev, "aria-disabled", String(i === 0));
+    put(next, "aria-disabled", String(i >= n - 1));
+  };
+  /* The strip has come to rest. A phone's quotes run from four lines to sixteen, so there the
+     strip takes the height of the one showing - only now, never mid-swipe: a finger held still
+     between two quotes changes nothing, and the layout never moves under a snap that is still
+     running. Pages of four keep the tallest page's height, which is the CSS's own. */
+  const settle = () => {
+    if (!track.isConnected) return;
+    aim = -1;
+    paint();
+    const i = index();
+    if (Math.abs(track.scrollLeft - left(i)) > 2) return;
+    if (stopOf(state.epiAt) !== i) state.epiAt = opens(i);
+    /* find-in-page or focus may have scrolled a quote the shorter strip clips up into view */
+    if (track.scrollTop) track.scrollTop = 0;
+    track.style.height = single ? stop(i).offsetHeight + "px" : "";
+  };
+  /* a resize, a rotation or a late webfont: the same quote stays in view */
+  const relayout = () => {
+    queued = 0;
+    if (!track.isConnected) return;
+    const was = single;
+    measure();
+    if (single !== was || track.clientWidth !== width) {
+      width = track.clientWidth;
+      track.scrollLeft = left(stopOf(state.epiAt));
+    }
+    settle();
+  };
+  /* a click names its stop before the scroll gets there, so a second click while the first is
+     still gliding carries on from where that one is going instead of aiming at it again */
+  const turn = d => {
+    const from = aim >= 0 ? aim : index();
+    const to = Math.max(0, Math.min(count() - 1, from + d));
+    if (to === from) return;
+    aim = to;
+    const still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    track.scrollTo({ left: left(to), behavior: still ? "auto" : "smooth" });
+    clearTimeout(timer);
+    timer = setTimeout(settle, 400);   // in case the scroll never starts
+  };
+
+  measure();
+  width = track.clientWidth;
+  if (state.epiAt >= figs.length) state.epiAt = 0;
+  track.scrollLeft = left(stopOf(state.epiAt));   // back where the reader left it
+  settle();
+  info.setAttribute("aria-live", "polite");       // a turned page is news from here on; the first count is not
+
+  track.addEventListener("scroll", () => {
+    paint();
+    clearTimeout(timer);
+    timer = setTimeout(settle, 120);   // WebKit has no scrollend
+  }, { passive: true });
+  /* Safari reads a sideways swipe the strip cannot follow as Back or Forward: it has no
+     overscroll-behavior before 16, and from 16 lets that swipe through on purpose (WebKit
+     bugs 235851, 240183). So a sideways wheel pointing past the end the strip rests at is
+     cancelled here, on the strip; one it can follow, an upright one, and a pinch-zoomed
+     reader panning the page are left alone. Back is still a swipe anywhere off the strip. */
+  track.addEventListener("wheel", e => {
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    if (window.visualViewport && visualViewport.scale > 1) return;
+    const end = track.scrollWidth - track.clientWidth;
+    if ((e.deltaX < 0 && track.scrollLeft < 1) || (e.deltaX > 0 && track.scrollLeft > end - 1)) e.preventDefault();
+  }, { passive: false });
+  /* aria-disabled, not disabled: disabling the button that has the keyboard focus throws the
+     focus out to <body>, and Safari then starts Tab again from the top of the page */
+  [prev, next].forEach(b => b.addEventListener("click", () => {
+    if (b.getAttribute("aria-disabled") !== "true") turn(Number(b.getAttribute("data-step")));
+  }));
+  /* the quotes change size when the window does, and again when the webfonts land; a
+     ResizeObserver hears both, where a resize listener would miss the fonts. It watches the
+     quotes, never the strip, so setting the strip's height cannot wake it again. */
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => {
+      if (!track.isConnected) { ro.disconnect(); return; }
+      if (!queued) queued = requestAnimationFrame(relayout);
+    });
+    figs.forEach(f => ro.observe(f));
+    epiObserver = ro;
+  }
 }
 
 function renderList() {
