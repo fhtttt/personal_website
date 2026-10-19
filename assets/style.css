@@ -645,7 +645,12 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
   .epi + .epi { margin-top: 0; }
   .epi-en blockquote { max-width: none; }
 }
-@media (max-width: 640px) {
+/* 竖排 needs a column as wide as the passage: about 383px whatever the font, since its
+   columns are line-heights, not glyphs. Two such columns, the 40px gutter and #app's 32px
+   sides first fit at 870px; below that the passage ran across the gutter, and from 641 to
+   about 780px straight through Dillard's last lines. So below 870px it reads across, as it
+   already did on a phone. Recheck the number if the passage or its sizes change. */
+@media (max-width: 869px) {
   /* 小屏：日语从竖排改横排，随宽度换行，避免超出视口造成横向滚动/右侧被切 */
   .epi-ja { align-items: stretch; }
   .epi-ja .bl-body {
