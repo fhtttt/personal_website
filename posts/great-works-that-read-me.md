@@ -2,7 +2,7 @@
 title: Great Works That Read Me
 category: Others
 created: 2026-08-03
-updated: 2026-10-18
+updated: 2026-10-19
 summary: A running record of the books, lectures, films and TV series, poems, songs, essays and papers that read my life seriously.
 tags:
   - recommendation
@@ -10,6 +10,7 @@ tags:
 ---
 ## Books
 - 曹雪芹《紅樓夢》
+- 王阿成《良娼》
 
 
 ## Lectures
@@ -19,6 +20,7 @@ tags:
 
 ## Films and TV Series
 - In Geek We Trust (IT狗)
+- 神女
 
 ## Poems and songs
 - 王維《雜詩三首·其二》
