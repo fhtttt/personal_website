@@ -64,5 +64,6 @@ tags:
 - William Faulkner, *A Rose for Emily*
 - Ernst Bloch, *Ungleichzeitigkeit und Pflicht zu ihrer Dialektik*
 - Benedict Anderson, *Imagined Communities: Reflections on the Origin and Spread of Nationalism*
+- 蕭統《昭明文選》
 
 
