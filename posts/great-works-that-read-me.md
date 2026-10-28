@@ -76,5 +76,6 @@ tags:
 - Georg Lukács, *Der historische Roman*
 - Joseph Frank, *Spatial Form in Modern Literature*
 - Henri Bergson, *Essai sur les données immédiates de la conscience*
+- Gustave Flaubert, *Madame Bovary*
 
 
