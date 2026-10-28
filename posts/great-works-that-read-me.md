@@ -73,5 +73,6 @@ tags:
 - 林尹《文字學概說》
 - Franco Moretti, *Il romanzo di formazione*
 - Karl Marx, *Der achtzehnte Brumaire des Louis Bonaparte*
+- Georg Lukács, *Der historische Roman*
 
 
