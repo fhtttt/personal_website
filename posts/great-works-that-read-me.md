@@ -72,5 +72,6 @@ tags:
 - 許慎撰，段玉裁注《說文解字注》
 - 林尹《文字學概說》
 - Franco Moretti, *Il romanzo di formazione*
+- Karl Marx, *Der achtzehnte Brumaire des Louis Bonaparte*
 
 
