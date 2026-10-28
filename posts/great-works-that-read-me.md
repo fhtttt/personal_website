@@ -2,7 +2,7 @@
 title: Great Works That Read Me
 category: Others
 created: 2026-08-03
-updated: 2026-10-21
+updated: 2026-10-28
 summary: A running record of the books, lectures, films and TV series, poems, songs, essays and papers that read my life seriously.
 tags:
   - recommendation
@@ -65,5 +65,6 @@ tags:
 - Ernst Bloch, *Ungleichzeitigkeit und Pflicht zu ihrer Dialektik*
 - Benedict Anderson, *Imagined Communities: Reflections on the Origin and Spread of Nationalism*
 - 蕭統《昭明文選》
+- 姜夔《白石道人歌曲集》
 
 
