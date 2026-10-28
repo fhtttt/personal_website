@@ -66,5 +66,7 @@ tags:
 - Benedict Anderson, *Imagined Communities: Reflections on the Origin and Spread of Nationalism*
 - 蕭統《昭明文選》
 - 姜夔《白石道人歌曲集》
+- 孔子、曾子、子思、孟子著，謝冰瑩、李鍌、劉正浩、邱燮友編譯《新譯四書讀本》
+- 老子著，陳鼓應注譯《老子今注今譯》
 
 
