@@ -74,5 +74,7 @@ tags:
 - Franco Moretti, *Il romanzo di formazione*
 - Karl Marx, *Der achtzehnte Brumaire des Louis Bonaparte*
 - Georg Lukács, *Der historische Roman*
+- Joseph Frank, *Spatial Form in Modern Literature*
+- Henri Bergson, *Essai sur les données immédiates de la conscience*
 
 
