@@ -2,7 +2,7 @@
 title: Great Works That Read Me
 category: Others
 created: 2026-08-03
-updated: 2026-10-28
+updated: 2026-10-29
 summary: A running record of the books, lectures, films and TV series, poems, songs, essays and papers that read my life seriously.
 tags:
   - recommendation
@@ -32,6 +32,7 @@ tags:
 - 王維《竹里館》
 - 王維《山中與裴迪秀才書》
 - 溫庭筠《菩薩蠻》十四首
+- 南音《梅花操》
 
 
 ## Blog posts, essays and articles
