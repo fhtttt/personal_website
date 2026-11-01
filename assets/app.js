@@ -6,7 +6,7 @@ const SITE = {
 };
 
 /* fixed category order + labels (must match `category` in posts.json) */
-const CATS = ["Information Theory", "History of Philosophy", "Others"];
+const CATS = ["Information Theory", "Philology", "Others"];
 
 /* the epigraphs. `id` is the name EPIGRAPH_PAGES below places a quote by, and nothing
    else places it; `lang` picks its typeface, and `dir: "rtl"` marks a right-to-left script.

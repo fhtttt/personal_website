@@ -371,7 +371,7 @@ cannot occur in a post, which is the whole reason NUL was chosen.
 
 ## Categories (fixed three, do not add new ones)
 
-`Information Theory` · `History of Philosophy` · `Others`
+`Information Theory` · `Philology` · `Others`
 
 Order and exact strings are defined by `CATS` at the top of `assets/app.js`. A post's
 `category` must equal one of them exactly. Anything not in the first two goes to `Others`.
