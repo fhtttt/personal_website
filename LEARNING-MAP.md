@@ -19,7 +19,7 @@ the file tree show only what you actually write.
 
 ```
 posts/                     ← open this in Obsidian
-  write-your-own-history.md
+  great-works-that-read-me.md
   learning-map.md          ← the index note
   learning/                ← the atomic notes
     dedekind-cut.md
@@ -112,7 +112,7 @@ Three things about that file and nothing else matters:
 | `[[dedekind-cut]]` | a link reading **Dedekind Cuts** — the note's own title, not the slug |
 | `[[dedekind-cut\|the cut]]` | a link reading *the cut* |
 | `[[dedekind-cut#Transcript]]` | **Dedekind Cuts › Transcript**, landing on that heading |
-| `[[write-your-own-history]]` | works across the whole site, not just the map |
+| `[[great-works-that-read-me]]` | works across the whole site, not just the map |
 | `![[diagram.png]]` | the image, from `posts/attachments/` |
 | `[[typo-here]]` | faded plain text, the way Obsidian shows an unresolved link |
 

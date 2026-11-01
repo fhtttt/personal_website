@@ -23,7 +23,6 @@ const QUOTES = [
       "此情可待成追憶，只是當時已惘然。",
     ],
     cite: "李商隱 ·《錦瑟》",
-    post: "write-your-own-history",
   },
   {
     id: "mahoyo", lang: "ja",

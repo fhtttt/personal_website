@@ -404,7 +404,8 @@ post from someone browsing the site; it does not make it private.**
 
 On 2026-09-13 the user set this: **a post hidden from the site is not committed at all.**
 It is written locally and never enters git. `A Commonplace Book` and the `Learning Map`
-(with `learning.json` and every note under `posts/learning/`) were taken out that day.
+(with `learning.json` and every note under `posts/learning/`) were taken out that day;
+`Write Your Own History` followed on 2026-11-01.
 
 - Their records live in `posts.local.json`, gitignored, same shape as `posts.json`.
   `build_pages.py` merges it; `app.js` asks for it only over http, i.e. a local preview —
@@ -500,8 +501,8 @@ python3 build_pages.py && python3 -m http.server 8000
 then open http://localhost:8000 (must be served over http; opening file:// directly breaks fetch).
 
 `http.server` does **not** resolve an extensionless path to `<path>.html` the way
-GitHub Pages does, so `/write-your-own-history` 404s locally. Preview a post at
-`/write-your-own-history.html` — `route()` strips the suffix, so the page behaves
+GitHub Pages does, so `/great-works-that-read-me` 404s locally. Preview a post at
+`/great-works-that-read-me.html` — `route()` strips the suffix, so the page behaves
 identically (a note: `/learning/dedekind-cut.html`). Do not "fix" the routing over
 this; nothing is wrong with it.
 
