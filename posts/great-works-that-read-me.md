@@ -19,14 +19,12 @@ tags:
 - [Randy Pausch's Last Lecture: Achieving Your Childhood Dreams](https://youtu.be/ji5_MqicxSo)
 
 ## Films and TV Series
-- In Geek We Trust (IT狗)
 - 神女
 
 ## Poems, songs and letters
 - 王維《雜詩三首·其二》
 - 李商隱《無題·相見時難別亦難》
 - سعدی شیرازی «گلستان»
-- 薛凱琪《給十年後的我》
 - حافظ شیرازی «تنت به ناز طبیبان نیازمند مباد»
 - نیما یوشیج «می‌تراود مهتاب»
 - 王維《竹里館》
