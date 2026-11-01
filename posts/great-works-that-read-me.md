@@ -33,6 +33,7 @@ tags:
 - 王維《山中與裴迪秀才書》
 - 溫庭筠《菩薩蠻》十四首
 - 南音《梅花操》
+- 陶淵明《歸去來兮辭》
 
 
 ## Blog posts, essays and articles
