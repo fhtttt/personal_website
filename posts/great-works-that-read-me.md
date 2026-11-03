@@ -81,5 +81,6 @@ tags:
 - 陳彭年等《廣韻》
 - Theodore Dreiser, *Sister Carrie*
 - Jacques Rancière, *Le concept d'anachronisme et la vérité de l'historien*
+- Thorstein Veblen, *The Theory of the Leisure Class*
 
 
