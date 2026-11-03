@@ -82,5 +82,6 @@ tags:
 - Theodore Dreiser, *Sister Carrie*
 - Jacques Rancière, *Le concept d'anachronisme et la vérité de l'historien*
 - Thorstein Veblen, *The Theory of the Leisure Class*
+- Karl Marx, Friedrich Engels, *Die deutsche Ideologie*
 
 
