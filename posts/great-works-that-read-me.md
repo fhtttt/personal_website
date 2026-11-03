@@ -80,5 +80,6 @@ tags:
 - 林尹著，林炯陽注釋《中國聲韻學通論》
 - 陳彭年等《廣韻》
 - Theodore Dreiser, *Sister Carrie*
+- Jacques Rancière, *Le concept d'anachronisme et la vérité de l'historien*
 
 
