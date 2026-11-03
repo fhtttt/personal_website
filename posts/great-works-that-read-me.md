@@ -2,7 +2,7 @@
 title: Great Works That Read Me
 category: Others
 created: 2026-08-03
-updated: 2026-11-01
+updated: 2026-11-03
 summary: A running record of the books, lectures, films and TV series, poems, songs, essays and papers that read my life seriously.
 tags:
   - recommendation
@@ -79,5 +79,6 @@ tags:
 - Gustave Flaubert, *Madame Bovary*
 - 林尹著，林炯陽注釋《中國聲韻學通論》
 - 陳彭年等《廣韻》
+- Theodore Dreiser, *Sister Carrie*
 
 
