@@ -86,5 +86,6 @@ tags:
 - Karl Mannheim, *Ideologie und Utopie*
 - Hannah Arendt, *The Human Condition*
 - Francis Fukuyama, *The End of History and the Last Man*
+- Edith Wharton, *The House of Mirth*
 
 
