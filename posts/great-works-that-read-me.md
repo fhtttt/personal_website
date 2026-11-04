@@ -85,5 +85,6 @@ tags:
 - Karl Marx, Friedrich Engels, *Die deutsche Ideologie*
 - Karl Mannheim, *Ideologie und Utopie*
 - Hannah Arendt, *The Human Condition*
+- Francis Fukuyama, *The End of History and the Last Man*
 
 
