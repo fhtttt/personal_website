@@ -2,7 +2,7 @@
 title: Great Works That Read Me
 category: Others
 created: 2026-08-03
-updated: 2026-11-03
+updated: 2026-11-04
 summary: A running record of the books, lectures, films and TV series, poems, songs, essays and papers that read my life seriously.
 tags:
   - recommendation
@@ -84,5 +84,6 @@ tags:
 - Thorstein Veblen, *The Theory of the Leisure Class*
 - Karl Marx, Friedrich Engels, *Die deutsche Ideologie*
 - Karl Mannheim, *Ideologie und Utopie*
+- Hannah Arendt, *The Human Condition*
 
 
