@@ -9,6 +9,9 @@ One build step: `build_pages.py` writes a real HTML page per post.
   each a video plus a hand-typed transcript. The notes are deliberately absent from
   `posts.json`, so they stay out of the home list and the site-wide search. How to add
   one: [`LEARNING-MAP.md`](./LEARNING-MAP.md).
+- **World history**: `/world-history` is a timeline with an annotated world map beside it,
+  growing one event at a time. Each event is a markdown file in `posts/events/`, read into
+  the generated `events.json`. How to add one: [`WORLD-HISTORY.md`](./WORLD-HISTORY.md).
 - **Home**: bio + ventures + academic + post list with full-text search, category
   filter, excerpts, and pagination; plus a multilingual epigraph section.
 - **Article features**: Markdown (vendored `marked`), LaTeX via KaTeX (`$…$`, `$$…$$`),
@@ -20,8 +23,8 @@ One build step: `build_pages.py` writes a real HTML page per post.
 - **Routing**: real paths (`/<slug>`), client-side, refresh-safe.
 
 Conventions for writing posts, commit messages and readings are in
-[`CLAUDE.md`](./CLAUDE.md); the learning map has its own procedure in
-[`LEARNING-MAP.md`](./LEARNING-MAP.md).
+[`CLAUDE.md`](./CLAUDE.md); the learning map and the world history have their own procedures
+in [`LEARNING-MAP.md`](./LEARNING-MAP.md) and [`WORLD-HISTORY.md`](./WORLD-HISTORY.md).
 
 ## Local preview
 

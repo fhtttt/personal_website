@@ -9,6 +9,11 @@ The learning map's notes work the same way one level down: `learning/<slug>.html
 is served at `/learning/<slug>`. They are listed in `learning.json`, never in
 `posts.json`, which is what keeps them out of the home list and the site-wide search.
 
+The world history has no pages of its own under it. Its events are markdown files in
+`posts/events/`, and this script reads their frontmatter into `events.json`, because a
+browser cannot list a folder. The folder is the record; the manifest is only its index,
+so there is nothing to keep in step by hand.
+
 The site itself stays a client-side app: each generated page loads the same CSS and
 JS as the root index.html, and app.js works out which post to render from the path.
 The only thing that differs per page is the <head> — title, description, canonical,
@@ -23,6 +28,7 @@ Pages belonging to posts or notes that have been removed from their manifest are
 deleted. The manifests are validated first; a broken one stops the build.
 """
 
+import datetime
 import html
 import json
 import pathlib
@@ -41,6 +47,12 @@ LOCAL_POSTS = "posts.local.json"
 MAP_FILE = "learning.json"
 MAP_SLUG = "learning-map"
 NOTE_DIR = "learning"
+
+# the world history: one markdown file per event, indexed into a generated manifest
+EVENTS_FILE = "events.json"
+EVENTS_SLUG = "world-history"
+EVENT_DIR = "posts/events"
+EVENT_KEYS = {"title", "start", "end", "countries", "map", "summary", "tags"}
 
 TEMPLATE = """<!doctype html>
 <html lang="en">
@@ -222,6 +234,251 @@ def load_map():
     return nodes, edges
 
 
+# what YAML reads as syntax at the start of a plain value
+YAML_SYNTAX = tuple("*&!%@`|>{[,") + ("- ", "? ")
+KEY_RE = re.compile(r"""^([^\s:#\-'"\[\]{}][^:]*?)\s*:(?:\s+(.*))?$""")
+FLOW_ITEM_RE = re.compile(r"""\s*(?:"(?:\\.|[^"\\])*"|'(?:''|[^'])*')\s*|[^,]+""")
+
+
+def cannot_read(where, line):
+    die(f"{where}: cannot read the line {line.strip()!r}. A value stays on one line, and one "
+        f"holding `: ` or starting with a YAML symbol goes in quotes")
+
+
+def scalar(raw, where, line):
+    """One value, as Obsidian will read it, or a refusal naming the line. This is not a YAML
+    parser and is not trying to be one: the build is the gate, and what it cannot read exactly
+    it must not guess at, because a wrong guess is a date or a place quietly lost."""
+    raw = raw.strip()
+    m = re.match(r"""^"((?:[^"\\]|\\.)*)"(?:\s+#.*)?$""", raw)
+    if m:
+        try:
+            return json.loads('"' + m.group(1) + '"', strict=False)
+        except ValueError:
+            return m.group(1)
+    m = re.match(r"""^'((?:[^']|'')*)'(?:\s+#.*)?$""", raw)
+    if m:
+        return m.group(1).replace("''", "'")
+    if raw[:1] in ('"', "'"):
+        cannot_read(where, line)
+    raw = re.sub(r"(^|\s+)#.*$", "", raw)
+    if raw in ("null", "Null", "NULL", "~"):
+        return ""
+    if re.search(r":(\s|$)", raw) or raw.startswith(YAML_SYNTAX):
+        cannot_read(where, line)
+    return raw
+
+
+def event_fields(path, where):
+    """The frontmatter of an event, with lists kept as lists. `frontmatter()` above flattens
+    them, which is fine for comparing a title and useless for reading a list of places.
+    Obsidian writes block lists, and a hand-typed one may sit at any indent, or inline. A key
+    this site does not use is kept empty for the caller to warn about, and whatever is nested
+    under it is left alone: that is the vault's business."""
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError:
+        die(f"{where}: is not UTF-8")
+    m = re.match(r"^---\r?\n(.*?)\r?\n---", text, re.S)
+    if not m:
+        return {}
+    meta, last = {}, None
+    # split, not splitlines: that also breaks at U+2028 and friends, which YAML keeps in a value
+    for line in m.group(1).split("\n"):
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        item = re.match(r"^\s*-(?:\s+(.*))?$", line)
+        if item:
+            if last is None or (meta[last] and not isinstance(meta[last], list)):
+                cannot_read(where, line)
+            if last not in EVENT_KEYS:
+                continue
+            if not isinstance(meta[last], list):
+                meta[last] = []
+            value = scalar(item.group(1) or "", where, line)
+            if value:
+                meta[last].append(value)
+            continue
+        if line[0] in " \t":
+            if last is None or last in EVENT_KEYS:
+                cannot_read(where, line)
+            continue
+        pair = KEY_RE.match(line)
+        if not pair:
+            cannot_read(where, line)
+        last, value = pair.group(1), (pair.group(2) or "").strip()
+        if last in meta:
+            die(f"{where}: `{last}` is written twice")
+        if last not in EVENT_KEYS:
+            meta[last] = ""
+            continue
+        flow = re.sub(r"\s+#.*$", "", value)
+        if flow.startswith("[") and flow.endswith("]"):
+            items = (scalar(v, where, line) for v in FLOW_ITEM_RE.findall(flow[1:-1]))
+            meta[last] = [v for v in items if v]
+        else:
+            meta[last] = scalar(value, where, line)
+    return meta
+
+
+def as_list(value):
+    return value if isinstance(value, list) else [value] if value else []
+
+
+WHEN_RE = re.compile(r"^(c\.\s*)?(\d{1,7})(?:-(\d{1,2})(?:-(\d{1,2}))?)?(?:\s+(BCE|CE))?$", re.I)
+MONTH_DAYS = (31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+
+
+def parse_when(raw, where):
+    """A date as a historian writes one: 1453, 1453-05, 1453-05-29, 221 BCE, 44-03-15 BCE,
+    c. 3100 BCE. Stored with BCE as a negative year, so -221 is 221 BCE and there is no 0."""
+    m = WHEN_RE.match(raw)
+    if not m:
+        die(f"{where}: {raw!r} is not a date. Write 1453, 1453-05, 1453-05-29, 221 BCE "
+            f"or c. 3100 BCE")
+    circa, year, month, day, era = m.groups()
+    year = int(year)
+    if year == 0:
+        die(f"{where}: {raw!r} names year 0, which no calendar has; 1 BCE is followed by 1 CE")
+    when = {"y": -year if era and era.upper() == "BCE" else year}
+    if month:
+        if not 1 <= int(month) <= 12:
+            die(f"{where}: {raw!r} has no such month")
+        when["m"] = int(month)
+    if day:
+        if not 1 <= int(day) <= MONTH_DAYS[int(month) - 1]:
+            die(f"{where}: {raw!r} has no such day")
+        # every leap year of either calendar is divisible by 4, counting 1 BCE as year 0
+        if int(month) == 2 and int(day) == 29 and (when["y"] + (when["y"] < 0)) % 4:
+            die(f"{where}: {raw!r} has no such day; that year had no 29 February")
+        when["d"] = int(day)
+    if circa:
+        when["c"] = True
+    return when
+
+
+def ends_before(end, start):
+    """Compare only as finely as both dates are known: `end: 1453` is not before
+    `start: 1453-05-29`, it just says less. The years are signed, so 146 BCE (-146) is
+    correctly after 264 BCE (-264), and writing those two backwards is caught here."""
+    for key in ("y", "m", "d"):
+        if key not in end or key not in start:
+            return False
+        if end[key] != start[key]:
+            return end[key] < start[key]
+    return False
+
+
+STOP_RE = re.compile(r"^(-?\d+(?:\.\d+)?)[\s,，]+(-?\d+(?:\.\d+)?)(?:\s+(.+))?$")
+
+
+def parse_mark(raw, where):
+    """One annotation on the map, one line of the `map` list. Latitude first, as a map
+    application copies it, and a name if it has one:
+
+        41.01 28.98 Constantinople                   a place
+        32.06 118.78 Nanjing → 2.20 102.25 Malacca   a route, in the order it was travelled
+        area 34 108 Tang → 40 116 → 30 120           a region, named by its first corner
+
+    It has to be a string because Obsidian's property editor cannot hold anything nested,
+    and no `: ` may appear in it, or YAML reads the line as a mapping."""
+    text = raw.strip()
+    kind = "point"
+    if text.lower().startswith("area "):
+        kind, text = "area", text[5:]
+    stops = []
+    for part in re.split(r"\s*(?:→|-+>)\s*", text):
+        m = STOP_RE.match(part.strip())
+        if not m:
+            die(f"{where}: map entry {raw!r}: {part.strip()!r} should read "
+                f"`latitude longitude name`")
+        # both would otherwise pass as a name, and draw the wrong thing without a word
+        if m.group(3) and (re.search(r"=>|⇒|⟶|➜|➔|➡", m.group(3)) or re.match(r"^-?\d+,\d+$", m.group(3))):
+            die(f"{where}: map entry {raw!r}: write a route with → and a decimal with a point")
+        lat, lon = float(m.group(1)), float(m.group(2))
+        if abs(lat) > 90 or abs(lon) > 180:
+            die(f"{where}: map entry {raw!r}: {lat}, {lon} is off the planet "
+                f"(latitude comes first)")
+        stops.append([lat, lon, m.group(3).strip()] if m.group(3) else [lat, lon])
+    if kind == "area" and len(stops) < 3:
+        die(f"{where}: map entry {raw!r}: a region needs at least three corners")
+    if kind == "point" and len(stops) > 1:
+        kind = "route"
+    return {"kind": kind, "stops": stops}
+
+
+def load_events():
+    """Read every event in posts/events/. A broken one stops the build: a date that does
+    not parse would otherwise be an event silently missing from the timeline. Returns
+    None when the folder does not exist, so a site without events writes no manifest."""
+    folder = ROOT / EVENT_DIR
+    if not folder.is_dir():
+        return None
+    events = []
+    today = datetime.date.today()
+    now = {"y": today.year, "m": today.month, "d": today.day}
+    for path in sorted(folder.glob("*.md")):
+        if path.name.startswith("_") or not path.is_file():
+            continue
+        slug, where = path.stem, f"{EVENT_DIR}/{path.name}"
+        if not SLUG_RE.match(slug):
+            die(f"{where}: the filename is the slug, and must be lowercase kebab-case ASCII")
+        meta = event_fields(path, where)
+        for key in sorted(set(meta) - EVENT_KEYS):
+            print(f"  ! {where}: unknown field {key!r} is ignored (a typo?)")
+        for key in ("title", "start", "end", "summary"):
+            if isinstance(meta.get(key), list):
+                if meta[key]:
+                    die(f"{where}: `{key}` is one value, not a list")
+                meta[key] = ""
+        if not meta.get("title"):
+            die(f"{where}: no `title`")
+        if not meta.get("start"):
+            die(f"{where}: no `start`")
+        event = {"slug": slug, "title": meta["title"], "start": parse_when(meta["start"], where)}
+        # a history has no future, and `end: present` under a later start draws a span backwards
+        if ends_before(now, event["start"]):
+            die(f"{where}: starts in the future ({meta['start']})")
+        if meta.get("end"):
+            if meta["end"].lower() == "present":
+                event["end"] = {"now": True}
+            else:
+                event["end"] = parse_when(meta["end"], where)
+                if ends_before(event["end"], event["start"]):
+                    die(f"{where}: ends ({meta['end']}) before it starts ({meta['start']})")
+                if ends_before(now, event["end"]):
+                    die(f"{where}: ends in the future ({meta['end']}); write `end: present`")
+        event["countries"] = as_list(meta.get("countries"))
+        if not event["countries"]:
+            die(f"{where}: no `countries`")
+        event["map"] = [parse_mark(m, where) for m in as_list(meta.get("map"))]
+        if not event["map"]:
+            print(f"  ! {where}: no `map`, so nothing will be marked on the map")
+        if meta.get("summary"):
+            event["summary"] = meta["summary"]
+        tags = as_list(meta.get("tags"))
+        if tags:
+            event["tags"] = tags
+        events.append(event)
+    # the count has no year 0: 1 BCE is 0 here, so a sort and a subtraction both come out right
+    def order(e):
+        y = e["start"]["y"]
+        return (y + 1 if y < 0 else y, e["start"].get("m", 0), e["start"].get("d", 0), e["title"])
+    events.sort(key=order)
+    return events
+
+
+def write_events(events):
+    """One event per line, so that adding an event is a one-line diff of the manifest."""
+    lines = ",\n".join(json.dumps(e, ensure_ascii=False) for e in events)
+    text = ('{"_readme": "Generated by build_pages.py from posts/events/*.md. Do not edit: '
+            'change the markdown and rebuild.",\n"events": [\n' + lines + '\n]}\n')
+    path = ROOT / EVENTS_FILE
+    if not path.exists() or path.read_text(encoding="utf-8") != text:
+        path.write_text(text, encoding="utf-8")
+        print(f"  wrote {EVENTS_FILE}")
+
+
 def not_ignored(paths):
     """Of `paths`, the ones git would still commit — tracked, or not matched by .gitignore.
     A local-only post exists to stay out of the repo; one missing .gitignore line puts
@@ -245,6 +502,10 @@ def main() -> int:
             paths += [p.get("file", f"posts/{p['slug']}.md"), f"{p['slug']}.html"]
         if any(p["slug"] == MAP_SLUG for p in local):
             paths.append(MAP_FILE)
+        if any(p["slug"] == EVENTS_SLUG for p in local):
+            paths.append(EVENTS_FILE)
+            paths += [f"{EVENT_DIR}/{f.name}" for f in sorted((ROOT / EVENT_DIR).glob("*.md"))
+                      if not f.name.startswith("_")]
         for path in not_ignored(paths):
             print(f"  ! {path} is local-only but not gitignored — it would be committed")
         posts = posts + local
@@ -282,6 +543,16 @@ def main() -> int:
                      noindex=map_unlisted), encoding="utf-8")
             print(f"  wrote {NOTE_DIR}/{slug}.html")
 
+    events = load_events()
+    if events is None and (ROOT / EVENTS_FILE).exists():
+        (ROOT / EVENTS_FILE).unlink()
+        print(f"  removed stale {EVENTS_FILE}")
+    if events is not None:
+        write_events(events)
+        if events and EVENTS_SLUG not in wanted:
+            print(f"  ! {EVENTS_FILE} has {len(events)} event(s) but posts.json has no "
+                  f"{EVENTS_SLUG!r} record, so nothing shows them")
+
     known = set()
     sources = []
     for p in posts:
@@ -292,6 +563,17 @@ def main() -> int:
         known.add(n["slug"].lower())
         known.add(str(n.get("title", "")).lower())
         sources.append((ROOT / n["file"], n["slug"]))
+    # a wikilink to an event opens it on the timeline, so an event is a name like any other
+    for e in events or []:
+        if e["slug"] in known:
+            print(f"  ! event {e['slug']!r} shares its name with a post or a note; "
+                  f"a [[{e['slug']}]] will open the other one")
+        if str(e["title"]).lower() in known:
+            print(f"  ! event {e['slug']!r}: another page or event is also titled "
+                  f"{e['title']!r}; a [[{e['title']}]] will open the other one")
+        known.add(e["slug"].lower())
+        known.add(str(e["title"]).lower())
+        sources.append((ROOT / EVENT_DIR / f"{e['slug']}.md", e["slug"]))
     known.discard("")
     check_wikilinks([(p, s) for p, s in sources if p.is_file()], known)
 
@@ -324,7 +606,8 @@ def main() -> int:
                     print(f"  ! removed {entry.name}/index.html, but kept {entry.name}/ — "
                           f"it holds files this script did not write")
 
-    print(f"{len(wanted)} page(s) and {len(note_wanted)} note(s) generated.")
+    print(f"{len(wanted)} page(s), {len(note_wanted)} note(s) and "
+          f"{len(events or [])} event(s) generated.")
     return 0
 
 

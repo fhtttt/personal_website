@@ -8,6 +8,11 @@
   --code-bg: #f6f6f4;
   --maxw: 880px;
   --side: 32px;           /* #app's side padding; the epigraph strip reaches out into it */
+  --tick: #c4c4c4;        /* the world history's axis */
+  --sea: #f7f7f4;
+  --land: #e4e2da;
+  --coast: #cdcabf;
+  --grat: #ecebe5;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -18,6 +23,11 @@
     --accent: #d98a8a;
     --aoko: #6f9dee;
     --code-bg: #1e1e24;
+    --tick: #4a4a52;
+    --sea: #1b1b20;
+    --land: #2e2e35;
+    --coast: #3f3f47;
+    --grat: #25252b;
   }
 }
 
@@ -101,7 +111,7 @@ a:hover { text-decoration: underline; }
 /* the heading rule is the same 1px line that divides the rows under it, so a row block
    gets no extra air from the h2 — blocks that are not rows ask for their own. */
 .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 24px 0 20px; }
-#search, #map-search {
+#search, #map-search, #atlas-search {
   flex: 1 1 180px;
   min-width: 140px;
   padding: 7px 11px;
@@ -112,7 +122,7 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--line);
   border-radius: 7px;
 }
-#search:focus, #map-search:focus { outline: none; border-color: var(--muted); }
+#search:focus, #map-search:focus, #atlas-search:focus { outline: none; border-color: var(--muted); }
 .cats { display: flex; flex-wrap: wrap; gap: 6px; }
 .cat {
   padding: 4px 10px;
@@ -395,6 +405,300 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
 
 .post-meta .kicker { text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
 
+/* ---- the world history ----
+   One axis and one map. The axis is built by atlas.js from numbers alone, every tick and bar
+   absolutely placed, so nothing here sizes it; the map keeps to the right, in reach of the
+   whole axis however long that gets. The width of the page belongs to the two of them, so
+   the History rail steps down underneath instead of standing beside them. */
+body.atlas #app { max-width: 1360px; }
+body.atlas .prose:empty { display: none; }
+body.atlas .post-meta { margin-bottom: 28px; }
+
+.at-grid { display: flex; align-items: flex-start; }
+.at-axis { flex: 0 0 auto; width: var(--tl-w, 400px); min-width: 0; }
+.at-controls { margin: 0 0 14px; }
+.at-side {
+  flex: 1 1 auto; min-width: 0;
+  margin-left: 28px;
+  position: -webkit-sticky; position: sticky; top: 24px;
+  display: flex; flex-direction: column;
+  max-height: calc(100vh - 48px);
+}
+
+.tl { position: relative; }
+.ts { position: absolute; left: var(--spine-x); width: 1px; background: var(--tick); }
+.ts.far { background: none; border-left: 1px dashed var(--tick); }
+.ts.tail { background: linear-gradient(to top, var(--tick), transparent); }
+.ts.tail.end { background: linear-gradient(to bottom, var(--tick), transparent); }
+.tg {
+  position: absolute; left: 0; width: 88px; text-align: right;
+  transform: translateY(-50%);
+  font-size: 11px; line-height: 1; color: var(--muted);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  pointer-events: none;
+}
+
+/* a row is the whole stretch of axis nearer to its tick than to any other, so the pointer is
+   always on some year and sliding along the line never crosses a dead zone */
+.ty, .tb, .ce { touch-action: manipulation; }   /* a quick second tap is a choice, not a zoom */
+.ty {
+  position: absolute; left: 0; width: var(--axis-w);
+  margin: 0; padding: 0;
+  background: none; border: none; color: inherit; font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ty:focus { outline: none; }
+/* anchored by its right edge, so a long prehistoric year runs off to the left and never into
+   the tick: its right end is the same 12px short of the spine as every other label's */
+.ty-label {
+  position: absolute; right: calc(var(--axis-w) - 88px); text-align: right;
+  transform: translateY(-50%);
+  font-size: 13px; line-height: 1.3; color: var(--muted);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  transition: color .08s ease;
+}
+.ty-tick {
+  position: absolute; left: calc(var(--spine-x) - 4px); width: 9px; height: 1px;
+  background: var(--muted);
+  transition: background-color .08s ease;
+}
+/* the thread from the tick out to its card */
+.ty-guide {
+  display: none;
+  position: absolute; left: var(--spine-x); width: calc(var(--axis-w) - var(--spine-x) + 10px); height: 1px;
+  background: var(--tick);
+}
+.ty.on .ty-guide { display: block; }
+.ty.pin .ty-guide { display: block; background: var(--accent); }
+/* a guide belongs to the card that is showing, and a preview has taken the pinned year's place */
+.tl.previewing .ty.pin .ty-guide { display: none; }
+.ty.on .ty-label, .ty.pin .ty-label { color: var(--fg); }
+.ty.on .ty-tick { background: var(--fg); }
+.ty.sel .ty-label, .ty.pin .ty-label { color: var(--accent); }
+.ty.sel .ty-tick, .ty.pin .ty-tick { background: var(--accent); }
+.ty:focus-visible .ty-label { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
+/* a span. The hit area is the lane; the line inside it is what is drawn */
+.tb {
+  position: absolute;
+  margin: 0; padding: 0;
+  background: none; border: none; color: var(--muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .08s ease;
+}
+.tb:focus { outline: none; }
+.tb i {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  border-radius: 2px;
+  background: currentColor; opacity: .55;
+  transition: opacity .08s ease;
+}
+.tb-dur {
+  position: absolute; left: 5px; top: 50%;
+  -webkit-transform: translateY(-50%); transform: translateY(-50%);
+  -webkit-writing-mode: vertical-rl; writing-mode: vertical-rl;
+  font-size: 10.5px; line-height: 1; letter-spacing: .02em; white-space: nowrap;
+  background: var(--bg);    /* a guide crossing behind it should not read as striking it out */
+}
+.tb.on { color: var(--fg); }
+.tb.on i, .tb.sel i { opacity: 1; }
+.tb.sel { color: var(--accent); }
+
+/* the card beside the tick. Read-only while hovering, so it can never catch the pointer on its
+   way along the axis; pinned by a click, and only then something to click into */
+.tl-card {
+  position: absolute; z-index: 5;
+  left: max(112px, min(var(--card-l), 100% - 210px)); right: 0; max-width: 272px;
+  overflow-y: auto;
+  padding: 7px 5px 6px;
+  background: var(--bg);
+  border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, .07);
+  pointer-events: none;
+}
+.tl-card[hidden] { display: none; }
+.tl-card.pinned { pointer-events: auto; border-color: var(--tick); }
+.c-year {
+  padding: 0 8px 3px;
+  font-size: 12.5px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.c-sub {
+  margin: 8px 8px 2px; padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted);
+}
+.ce {
+  display: block; width: 100%; text-align: left;
+  margin: 0; padding: 5px 8px;
+  background: none; border: none; border-radius: 6px;
+  color: inherit; font: inherit;
+  cursor: pointer;
+}
+/* the ring first and its removal second: below Safari 15.4 the second rule is dropped, and the
+   other way round a keyboard user there would have no ring at all */
+.ce:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ce:focus:not(:focus-visible) { outline: none; }
+.ce-title {
+  display: block;
+  font-family: "LXGW WenKai Screen", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15.5px; line-height: 1.4;
+}
+.ce-where {
+  margin-left: 7px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", "PingFang SC", sans-serif;
+  font-size: 12px; color: var(--muted);
+}
+.ce-meta { display: block; margin-top: 1px; font-size: 12px; line-height: 1.45; color: var(--muted); }
+.ce.sel .ce-title { color: var(--accent); }
+@media (hover: hover) {
+  .tl-card.pinned .ce:hover { background: var(--code-bg); }
+  .tl-card.pinned .ce:hover .ce-title { color: var(--accent); }
+}
+
+/* the map. SVG, so hairlines stay hairlines at any zoom through non-scaling-stroke */
+.at-map {
+  position: relative; flex: 0 0 auto;
+  margin: 0; border-radius: 10px; overflow: hidden;
+  transition: background-color .4s ease;
+}
+/* zoomed in, the view can run past the edge of the projection: that is open sea, not the page */
+.at-map.near { background: var(--sea); }
+.at-stamp {
+  position: absolute; left: 0; bottom: 0; z-index: 1;
+  font-family: "LXGW WenKai Screen", -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 4px 10px 0 0;
+  background: var(--bg); border-top-right-radius: 8px;   /* a long year would otherwise run over land */
+  font-size: 22px; line-height: 1; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.at-stamp[hidden] { display: none; }
+.at-map svg { display: block; width: 100%; height: auto; max-height: 56vh; }
+.at-map path { vector-effect: non-scaling-stroke; }
+.w-sphere { fill: var(--sea); stroke: var(--coast); stroke-width: .7px; }
+.w-grat { fill: none; stroke: var(--grat); stroke-width: .6px; }
+.w-land { fill: var(--land); stroke: var(--coast); stroke-width: .5px; stroke-linejoin: round; }
+.w-lakes { fill: var(--sea); stroke: var(--coast); stroke-width: .4px; }
+.w-rivers { fill: none; stroke: var(--sea); stroke-width: .8px; stroke-linecap: round; stroke-linejoin: round; stroke-opacity: .6; transition: stroke-opacity .4s ease; }
+/* at world scale the rivers are texture, and closer in they are how you know where you are */
+.at-map.near .w-rivers { stroke-opacity: 1; }
+
+/* every event learned so far, one faint point each: the map at rest is the record of that.
+   Zero-length strokes with round caps, so hundreds of them are one element that keeps its size. */
+.mk-dots { fill: none; stroke: var(--accent); stroke-opacity: .38; stroke-width: 3.5px; stroke-linecap: round; }
+.mk-area { fill: var(--accent); fill-opacity: .12; stroke: var(--accent); stroke-opacity: .5; stroke-width: 1px; stroke-linejoin: round; }
+.mk-area.lv1 { fill-opacity: .06; stroke-opacity: .25; }
+.mk-route { fill: none; stroke: var(--accent); stroke-width: 1.6px; stroke-linecap: round; stroke-linejoin: round; }
+.mk-route.lv1 { stroke-opacity: .4; stroke-width: 1px; }
+.mk-arrow { fill: none; stroke: var(--accent); stroke-width: 1.6px; stroke-linecap: round; stroke-linejoin: round; }
+.mk-arrow.lv1 { stroke-opacity: .4; }
+.mk-pt { fill: var(--accent); stroke: var(--bg); stroke-width: 1.2px; }
+.mk-pt.lv1 { fill-opacity: .55; }
+.mk-label {
+  font-family: "LXGW WenKai Screen", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  fill: var(--fg);
+  stroke: var(--sea); stroke-width: 3px; stroke-linejoin: round;
+  paint-order: stroke;
+  pointer-events: none;
+  transition: opacity .15s ease;
+}
+.at-map.flying .mk-label { opacity: 0; }
+.mk-label.lv1 { fill: var(--muted); font-size: 12.5px; }
+.mk-label.area { fill: var(--accent); }
+
+/* What is under the map: the event opened, or a line saying how to open one. The wheel over the
+   panel scrolls the panel and then carries on to the page, so no overscroll-behavior: Chrome
+   applies it even to a panel with nothing to scroll, and the wheel simply stops working there. */
+.at-caption { margin-top: 18px; }
+.at-side.open .at-caption { display: none; }
+.at-detail {
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto;
+}
+.at-detail:empty { display: none; }
+.at-detail.open { margin-top: 18px; }
+.at-rest { margin: 0; font-size: 13.5px; color: var(--muted); }
+.at-rest.hint { margin-top: 2px; }
+.ev-head { display: flex; align-items: flex-start; }
+.ev-title {
+  flex: 1 1 auto; min-width: 0; margin: 0;
+  font-family: "LXGW WenKai Screen", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 22px; font-weight: 400; line-height: 1.35;
+}
+.ev-head .ev-close { flex: 0 0 auto; margin: 2px 0 0 12px; }
+.ev-meta { margin-top: 3px; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+.ev-country {
+  margin: 0; padding: 0;
+  font: inherit; color: inherit;
+  background: none; border: none;
+  text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .ev-country:hover { color: var(--accent); text-decoration-color: currentColor; }
+}
+.ev-sum {
+  margin: 12px 0 0;
+  font-family: "LXGW WenKai Screen", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px; line-height: 1.7;
+}
+.ev-body { font-size: 15.5px; line-height: 1.75; }
+.ev-body:empty { display: none; }
+.ev-body > :first-child { margin-top: 12px; }
+.ev-body > :last-child { margin-bottom: 4px; }
+.ev-body ul { padding-left: 1.3em; }
+/* room for two digits: the panel scrolls, so it clips whatever hangs off its left edge */
+.ev-body ol, .ev-body .footnotes ol { padding-left: 2em; }
+.ev-body li { margin: 3px 0; }
+
+/* Too narrow for two columns: the map rides at the top of the window with the axis scrolling
+   under it, and an opened event comes up from the bottom edge over the axis, so the map and
+   the prose are both in view without giving the map up. The caption stays in the flow when the
+   sheet comes up, or everything under the finger would move by its height. The sheet is a fixed
+   height so its top is known before its prose has arrived, and while it is up the page gets
+   that much more to scroll, or what is at the end of the page could never come out from under
+   it. Those numbers go together: atlas.js reads the sheet's top from the sheet itself. */
+@media (max-width: 959px) {
+  .at-grid { flex-direction: column; align-items: stretch; }
+  .at-axis { width: 100%; }
+  .tl { min-height: 150px; }   /* with few ticks the card would otherwise reach what follows the axis */
+  .at-side {
+    order: -1;
+    margin: 0 calc(-1 * var(--side)) 10px; padding: 0 var(--side) 8px;
+    top: 0; z-index: 6;
+    max-height: none;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .at-map svg { max-height: 34vh; }
+  .at-caption { margin-top: 6px; }
+  .at-side.open .at-caption { display: block; }
+  .at-rest.hint { display: none; }
+  .at-rest { font-size: 12.5px; }
+  .at-stamp { font-size: 18px; padding: 3px 8px 0 0; }
+  .at-detail.open {
+    position: fixed; z-index: 7; left: 0; right: 0; bottom: 0;
+    height: 46vh; margin: 0;
+    padding: 14px var(--side) 22px;
+    background: var(--bg);
+    border-top: 1px solid var(--tick);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, .08);
+  }
+  body.atlas.ev-open #app { padding-bottom: calc(46vh + 72px); }
+}
+/* the only way to close the sheet on a phone, where there is no Esc */
+@media (hover: none) {
+  .ev-head .ev-close { padding: 12px 14px; margin: -10px -14px -10px 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ty-label, .ty-tick, .tb, .tb i, .at-map, .w-rivers, .mk-label { transition: none; }
+}
+
 /* ---- history rail: the post's own git record, beside the post ----
    Narrow screens read top to bottom: article, revision list, opened revision.
    Wide screens put the list in a sticky right-hand rail and the opened
@@ -544,6 +848,16 @@ article h1 { font-size: 30px; line-height: 1.3; margin: 0 0 10px; }
     position: sticky; top: 40px;
     max-height: calc(100vh - 80px); overflow-y: auto;
     padding-left: 12px; margin-left: -12px;   /* room for .rev-item.active::before */
+  }
+  body.atlas #app { max-width: 1360px; }
+  body.atlas .post-wrap { display: flex; flex-direction: column; align-items: stretch; }
+  body.atlas .rail {
+    position: static; max-width: 46rem; max-height: none; overflow: visible;
+    margin-top: 72px; padding-left: 0; margin-left: 0;
+  }
+  body.atlas .post-wrap > .rev-detail {
+    margin: 40px 0 0; padding: 20px 0 0;
+    border-top: 1px solid var(--line); border-bottom: none;
   }
 }
 

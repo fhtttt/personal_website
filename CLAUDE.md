@@ -77,11 +77,26 @@ map: <what changed to the structure, one line>
 
 Examples: `map: Add Hilbert's Hotel`, `map: Link Dedekind cuts → Comparing
 infinities`, `map: Remove Cauchy sequences`, `map: Rename Comparing infinities`.
-One line, no body, one structural change per commit. This is the only exception
-to "Claude does not commit content" — and it stops at the index. **The notes
-themselves are ordinary content**: `post(learning/<slug>): …` with a body the
+One line, no body, one structural change per commit. Apart from `event:` below, this is
+the only exception to "Claude does not commit content" — and it stops at the index. **The
+notes themselves are ordinary content**: `post(learning/<slug>): …` with a body the
 user writes, exactly like any other post. Never mix a `map:` change with a note's
 own change.
+
+### Event commits - Claude writes these
+
+The user says what they learned and Claude files it, so a new event has no argument waiting
+to be written:
+
+```
+event: <what changed, one line>
+```
+
+Examples: `event: Add Fall of Constantinople`, `event: Correct the date of Fall of
+Constantinople`. One line,
+no body, one event per commit, `events.json` included. When the user writes details of their
+own and wants to say why, that is ordinary content: `post(events/<slug>): …`, body theirs and
+published. The procedure is in [`WORLD-HISTORY.md`](./WORLD-HISTORY.md).
 
 ### `tags` and `summary` are filing, not content
 
@@ -195,7 +210,7 @@ filing is not part of the argument.
   the post argues against.
 - Notes are the user's voice. Claude does not write them, same rule as commit bodies.
 - `renderPatch()` / `diffBlock()` / `wordDiff()` now serve **only** the `Manifest` block,
-  i.e. `learning.json`. They still read a unified patch word-by-word, and `wordDiff()`
+  i.e. `learning.json`, and the world history's `Event` block. They still read a unified patch word-by-word, and `wordDiff()`
   still returns `null` when two paragraphs share too little to interleave (similarity
   < 0.4) so the caller strikes one and inserts the other — that is the signal, not a
   failure. None of it touches the prose diff, which works line-by-line instead.
@@ -283,13 +298,101 @@ stored there, which turns a plausible slug into either a phantom match or an out
 `TypeError` that takes down the whole render. Every table keyed by a slug in `app.js`
 is built with `bare()` (`Object.create(null)`). Keep it that way when adding one.
 
+## The world history
+
+**The procedure for adding an event is in [`WORLD-HISTORY.md`](./WORLD-HISTORY.md). Follow
+it.** What is here is only what would otherwise get re-broken.
+
+**Only events the user has said they learned go in.** No samples, no seeding, no filling in
+a neighbouring century: on 2026-11-05 the user asked for the timeline to grow one event at a
+time, as they learn them. Test data lives in a copy of the site outside the repo. **Everything
+in an event is written in English**, by the user's decision the same day, whatever language
+the event was mentioned in.
+
+- `posts/events/<slug>.md` is the record, one file per event. `events.json` is **generated**
+  from their frontmatter by `build_pages.py`, because a browser cannot list a folder; never
+  edit it, always commit it. Events are never in `posts.json`, and have no pages of their own.
+- `assets/atlas.js` is its own file, fetched by `mountAtlas()` the first time the page opens.
+  A parse error there costs this page and not the site. It keeps the same syntax floor as
+  `app.js` regardless, and sits in a function so its names cannot collide with `app.js`.
+- `map` entries are flat strings because Obsidian's property editor cannot hold anything
+  nested, and a `: ` in one would make YAML read it as a mapping. `event_fields()` in the build
+  keeps lists as lists; `parseFrontmatter()` flattens them and is never used for these.
+- **`event_fields()` is not a YAML parser, and must not quietly become a bad one.** It reads the
+  narrow form the vault writes and *refuses everything else, naming the line*. Skipping a line it
+  did not understand was the original bug: an `end：1500` typed with a Chinese colon built clean
+  and turned a span into a moment. Keep it refusing.
+- The page must mount without `marked`, which does not parse below Safari 15. It has no article
+  to render, so `renderPost()` skips `renderMarkdown()` on an empty body. Only the events' prose
+  is lost without it.
+
+**The axis is elastic on purpose.** Requested as one tick per recorded year, which a linear
+scale cannot give: ticks would collide in the modern period and run for screens through the
+silent millennia. So order is true and distance is only a hint, and a bar's length cannot be
+read as a duration. **That is why a bar states its duration in words. Do not remove that
+label to tidy the axis.** It is laid out from numbers alone, nothing measured, so the rows and
+the bars cannot disagree and no late webfont can move a tick.
+
+**There is no year 0.** Years are stored signed with BCE negative, and anything that subtracts
+goes through `astro()`: 27 BCE to 14 CE is 40 years, not 41. Durations use the finest unit
+both ends are known to, so 16 December 755 to 17 February 763 is 7 years, not 8, and a running
+span ends today. **Day counts use `dayNumber()`, never `Date`**: `Date` gives `NaN` past about
+271,000 BCE, and knows nothing of the Julian calendar in force before 15 October 1582.
+
+**The map has no borders by decision.** Coasts, rivers and lakes only, because a modern border
+under a medieval event is simply wrong. `project()` is the only projection, used for the land
+and the annotations alike so they cannot disagree. `assets/world.json` must stay on land cut at
+the date line (see `WORLD-HISTORY.md`): rings stitched across it draw a line across the world.
+
+**The hover rules, each of which fixes something that happened:**
+
+- The hover card is `pointer-events: none`. Only a click pins it, and only then is it a thing
+  to click into, so it can never catch the pointer on its way along the axis.
+- With a year pinned, other rows and bars answer only once the pointer has **stopped** for
+  `INTENT_MS`; a `mousemove` re-arms the wait. The line from a tick to a lower entry in its card
+  crosses them, and merely waiting per row was not enough: a slow hand stays that long in each.
+- The pinned year's own tick previews nothing. It used to, and that switched off the card's
+  `pointer-events` just as the pointer set off towards it.
+- `paintCard()` rewrites the card only when what it shows changes. Rewriting under the pointer
+  refires `mouseover` on the new nodes and loses its scroll position.
+- An open event holds the map still under anything else the pointer does: the reader is reading.
+- The click-outside handler checks `e.target.isConnected`. A wikilink in the prose redraws the
+  prose before the click reaches `document`, so its target is detached and looks like an
+  outside click.
+- A card is clamped to the window only while its tick is in the window. Scrolled away, it goes
+  with its tick; clamped, it sat pinned beside the wrong years.
+- **No `overscroll-behavior` on `.at-detail`.** Chrome applies it even to a panel with nothing to
+  scroll, and the wheel over the details simply stopped working.
+
+**Below 960px the visible axis is a band**, between the map riding at the top and the sheet at
+the bottom, and `band()` is what everything that places or reveals something asks. The caption
+stays in the flow when the sheet comes up, or the whole axis jumps out from under the finger. The
+sheet is a fixed height, so its top is known before its prose has arrived, and `#app` gets that
+much more padding while it is up, or the end of the page could never come out from under it.
+
+**Lanes narrow rather than push.** The axis and its card may take `AXIS_SHARE` of a wide page and
+all of a phone, from the most lanes the unfiltered axis needs, held there so that typing in the
+search moves no column. Under the full lane width the duration labels go and only the card gives
+them. **Place names are measured to be placed**, and the webfont's unicode-range subsets arrive
+only after a character asks for them, which is after `document.fonts.ready`: hence `loadingdone`.
+
+**Selecting an event is a fragment, set with `replaceState`.** The link can be copied, and Back
+still means leave the page. `route()` ignores a change of fragment, so nothing re-renders, and
+the `hashchange` listener only selects an event; a footnote's `#fn-…` names no event and is
+left alone. That listener re-renders nothing, which is what *`route()` must ignore hash-only
+changes* below actually forbids.
+
+**The rail queries a directory.** `renderHistory()` gets `[file, "posts/events"]`, and the GitHub
+API takes a directory as a path. **`loadBlame()` is skipped on this page**: it fetches every
+revision in the rail, this page has no prose to date, and the rail grows by one commit per event.
+
 ## Layout conventions
 
 - `posts/<slug>.md` — one post = one markdown file. `slug` is lowercase kebab-case, ASCII only.
 - `posts/_template.md` — the starting template. **Copy it for a new post. It is NOT listed in `posts.json`, so it never shows on the site.** Files whose name starts with `_` are non-posts.
 - `posts.json` — the index the home page reads. **Every post must have exactly one record here** (except the template).
 - `<slug>.html` — **generated**, never hand-edited. Produced by `build_pages.py` from `posts.json`; carries the per-post `<title>`, description and Open Graph tags. Marked with a `<!-- generated by build_pages.py -->` first line, which is also how the script knows a stale page is safe to delete. A slug may not be `index`, `assets`, `posts`, `404` or `CNAME`; the script refuses those.
-- `assets/` — `style.css`, `app.js`, and the vendored `marked.min.js` (do not switch to a CDN). `assets/images/` holds post images.
+- `assets/` — `style.css`, `app.js`, and the vendored `marked.min.js` (do not switch to a CDN). `atlas.js` and the vendored `world.json` belong to the world history alone, and are fetched only by that page. `assets/images/` holds post images.
 - The home identity block and academic timeline are hardcoded in `renderHome()` in `assets/app.js`; the epigraph quotes live in `QUOTES`, placed a page at a time by `EPIGRAPH_PAGES` (`renderEpigraphs()`, paged by `bindEpigraphs()`), there too.
 - The site name / pinyin / English name are in `SITE` at the top of `assets/app.js`.
 
@@ -410,8 +513,9 @@ It is written locally and never enters git. `A Commonplace Book` and the `Learni
 - Their records live in `posts.local.json`, gitignored, same shape as `posts.json`.
   `build_pages.py` merges it; `app.js` asks for it only over http, i.e. a local preview —
   the live site is https and never requests it.
-- Every file of such a post — its `.md`, its generated `<slug>.html`, and for the map
-  `learning.json`, `posts/learning/*` and `learning/` — needs a line in `.gitignore`.
+- Every file of such a post — its `.md`, its generated `<slug>.html`, for the map
+  `learning.json`, `posts/learning/*` and `learning/`, and for the world history `events.json`
+  and `posts/events/*` — needs a line in `.gitignore`.
   `build_pages.py` names any that git would still commit. Never `git add -f` them.
 - Taking a post local stops it being served; it retracts nothing. Its earlier commits
   stay public on github.com, and *Published history is append-only* still holds.

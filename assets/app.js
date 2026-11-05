@@ -84,6 +84,15 @@ const MAP_SLUG = "learning-map";
 const MAP_FILE = "learning.json";
 const NOTE_DIR = "learning";
 
+/* ---- the world history ----
+   One more post that is an index: /world-history is a timeline of events beside a map of
+   them. Each event is a markdown file in posts/events/, and build_pages.py reads their
+   frontmatter into events.json, because a browser cannot list a folder. Everything that
+   draws it is in assets/atlas.js, fetched only when this page opens (mountAtlas). */
+const ATLAS_SLUG = "world-history";
+const EVENTS_FILE = "events.json";
+const EVENT_DIR = "posts/events";
+
 /* Every lookup table below is keyed by a slug, and a slug is whatever is written in
    posts.json or learning.json. `{}` answers `t["constructor"]` with an inherited
    function even when nothing was ever stored there, which turns a plausible slug into
@@ -97,21 +106,25 @@ const state = {
   commentary: null, hist: null,
   epiAt: 0,   // the epigraph strip's quote to come back to, by its place among the strip's quotes
   map: { nodes: [], edges: [] },
+  events: [],
   mapQuery: "", mapBodies: bare(), mapExcerpts: bare(), mapBodiesLoaded: false, mapHits: null,
 };
 
 boot();
 
 async function boot() {
-  const [posts, local, map] = await Promise.all([
+  const [posts, local, map, events] = await Promise.all([
     fetchJSON("/posts.json"),
     /* posts.local.json is gitignored: posts written locally and never committed. The
        live site is https and never has it, so only a local http preview asks for it */
     location.protocol === "https:" ? null : fetchJSON("/posts.local.json"),
     fetchJSON("/" + MAP_FILE),
+    /* asked for on every page, as the map's manifest is, because any post may wikilink an event */
+    fetchJSON("/" + EVENTS_FILE),
   ]);
   state.posts = (Array.isArray(posts) ? posts : []).concat(Array.isArray(local) ? local : []);
   state.map = normalizeMap(map);
+  state.events = events && Array.isArray(events.events) ? events.events.filter(e => e && e.slug && e.start) : [];
   window.addEventListener("popstate", route);
   document.addEventListener("click", onNavClick);
   /* the graph's edges are drawn from measured node boxes, so they have to be
@@ -177,6 +190,7 @@ function route() {
   const key = location.pathname + location.search;
   if (key === rendered) return;
   rendered = key;
+  hideBlame();     // only the prose it stood over could have hidden it, and that is going
   if (note) renderNote(note);
   else if (slug) renderPost(slug);
   else renderHome();
@@ -192,6 +206,14 @@ function onNavClick(e) {
   if (!a || a.target || a.hasAttribute("download")) return;
   if ("post" in a.dataset) { e.preventDefault(); go("/" + encodeURIComponent(a.dataset.post)); return; }
   if ("note" in a.dataset) { e.preventDefault(); go(noteHref(a.dataset.note)); return; }
+  /* already on the timeline, a link to an event opens it there; from anywhere else the page
+     has to be drawn first, and it reads the event back out of the fragment */
+  if ("event" in a.dataset) {
+    e.preventDefault();
+    if (window.Atlas && document.body.classList.contains("atlas")) window.Atlas.open(a.dataset.event);
+    else go(a.getAttribute("href"));
+    return;
+  }
   if ("home" in a.dataset) { e.preventDefault(); go("/"); return; }
   /* a note's prose links to other notes as plain markdown — [x](/learning/y). Take
      those over, but only those: a link this router cannot resolve must stay the
@@ -221,7 +243,7 @@ function routable(href) {
 /* ---------- home ---------- */
 function renderHome() {
   document.title = SITE.enName;
-  document.body.classList.remove("post");
+  document.body.classList.remove("post", "atlas");
   /* data-nosnippet: Google builds the home snippet from whichever rendered text it likes
      best (it once took the degree list), so every block but the creed opts out and the
      creed + meta description are all that is left to quote. Only span/div/section may
@@ -722,6 +744,8 @@ async function renderPost(slug) {
   if (at !== rendered) return;          // navigated away while the markdown loaded
 
   document.body.classList.add("post");
+  const isAtlas = slug === ATLAS_SLUG;
+  document.body.classList.toggle("atlas", isAtlas);
 
   if (!raw) {
     app.innerHTML = `<a class="back" data-home href="/">← Back</a><p class="empty">Post not found.</p>`;
@@ -746,8 +770,9 @@ async function renderPost(slug) {
           ${updated && updated !== created ? ` · updated ${esc(updated)}` : ""}
           ${cat ? ` · ${esc(cat)}` : ""}
         </div>
-        <div class="prose">${renderMarkdown(body)}</div>
+        <div class="prose">${body.trim() ? renderMarkdown(body) : ""}</div>
         ${isMap ? mapShell() : ""}
+        ${isAtlas ? `<section id="atlas" class="atlas-host"></section>` : ""}
       </article>
       <aside class="rail">
         <h2>History</h2>
@@ -759,10 +784,37 @@ async function renderPost(slug) {
   `;
 
   if (isMap) initMap();
+  if (isAtlas) mountAtlas();
   /* the index is two files — the prose and the manifest the graph is drawn from —
-     and both belong to its record, so the rail merges the commits of each */
-  renderHistory(slug, isMap ? [file, MAP_FILE] : [file]);
+     and both belong to its record, so the rail merges the commits of each. The timeline's
+     record is its prose and the folder of events; a path query takes a directory */
+  renderHistory(slug, isMap ? [file, MAP_FILE] : isAtlas ? [file, EVENT_DIR] : [file]);
   scrollToHash();
+}
+
+/* The timeline's code is its own file, fetched the first time the page opens: no other page
+   needs it, and a parse error there costs this one page rather than blanking the whole site,
+   which is what a parse error in this file does (see "Browser floor" in CLAUDE.md). */
+let atlasLoad = null;
+function mountAtlas() {
+  const at = rendered;
+  if (!atlasLoad) atlasLoad = new Promise((ok, no) => {
+    const s = document.createElement("script");
+    s.src = "/assets/atlas.js";
+    /* onload fires for a script that then failed to parse, which is the failure this file
+       being separate is for; only the name it should have left behind tells the two apart */
+    s.onload = () => (window.Atlas ? ok() : no());
+    s.onerror = no;
+    document.head.appendChild(s);
+  });
+  atlasLoad.then(() => {
+    if (at === rendered) window.Atlas.mount(document.getElementById("atlas"));
+  }).catch(() => {
+    /* a dropped connection should not stick for the session; a good script must not run twice */
+    if (!window.Atlas) atlasLoad = null;
+    const host = document.getElementById("atlas");
+    if (at === rendered && host) host.innerHTML = `<p class="empty">The timeline could not be loaded.</p>`;
+  });
 }
 
 /* Arriving at /post#heading, the browser looks for the anchor at load time — before
@@ -789,6 +841,7 @@ async function renderNote(slug) {
   if (at !== rendered) return;
 
   document.body.classList.add("post");
+  document.body.classList.remove("atlas");
 
   const back = `<a class="back" data-post="${MAP_SLUG}" href="/${MAP_SLUG}">← Learning Map</a>`;
   if (!raw) {
@@ -1188,7 +1241,7 @@ async function renderHistory(slug, files) {
     return {
       sha: c.sha,
       date: String(c.commit.author.date).slice(0, 10),
-      subject: msg[0].replace(/^(post|note)\([^)]*\):\s*/, "").replace(/^map:\s*/, ""),
+      subject: msg[0].replace(/^(post|note)\([^)]*\):\s*/, "").replace(/^(map|event):\s*/, ""),
       why: msg.slice(1).join("\n").trim(),
       notes: notes.filter(n => n.sha && c.sha.indexOf(String(n.sha)) === 0)
                   .sort((a, b) => String(a.date).localeCompare(String(b.date))),
@@ -1215,7 +1268,9 @@ async function renderHistory(slug, files) {
     b.addEventListener("click", () => openRev(Number(b.dataset.rev)))
   );
 
-  loadBlame(state.hist);
+  /* Blame walks every revision in the rail, one fetch each, to date the lines of the prose.
+     This page has next to no prose, and a rail that grows by one commit per event. */
+  if (slug !== ATLAS_SLUG) loadBlame(state.hist);
 }
 
 /* ---------- blame: which revision put this line here ----------
@@ -1405,19 +1460,22 @@ async function openRev(i) {
 
   const others = h.files.filter(f => !/\.md$/.test(f));
   if (!others.length) return;
+  const isEvent = others[0] === EVENT_DIR;
   let diff;
   try {
     const c = await ghJSON(`https://api.github.com/repos/${REPO}/commits/${r.sha}`);
-    const touched = (c.files || []).filter(x => others.indexOf(x.filename) >= 0);
+    /* one of a page's files may be a directory: the timeline's record is a folder of events */
+    const touched = (c.files || []).filter(x => others.some(o => x.filename === o || x.filename.indexOf(o + "/") === 0));
     if (!touched.length) return;
-    diff = touched.map(f => `<p class="diff-file">${esc(f.filename)}</p>` + (f.status === "added"
+    /* a manifest's first version is noise, but an event's first version is the event */
+    diff = touched.map(f => `<p class="diff-file">${esc(f.filename)}</p>` + (f.status === "added" && !isEvent
       ? `<p class="empty">Created — ${f.additions} lines.</p>`
       : `<div class="diff mono">${renderPatch(f.patch)}</div>`)).join("");
   } catch (e) {
     diff = `<p class="empty">Diff unavailable — <a href="https://github.com/${REPO}/commit/${esc(r.sha)}" target="_blank" rel="noopener">read it on GitHub</a>.</p>`;
   }
   if (state.hist !== h || h.open !== i) return;
-  detail.innerHTML = head + `<div class="rev-block"><h4>Manifest</h4>${diff}</div>` + tail;
+  detail.innerHTML = head + `<div class="rev-block"><h4>${isEvent ? "Event" : "Manifest"}</h4>${diff}</div>` + tail;
   bindClose(detail);
 }
 
@@ -1784,6 +1842,12 @@ function resolveWiki(name) {
     if (String(n.slug).toLowerCase() === key || String(n.title || "").toLowerCase() === key)
       return { href: noteHref(n.slug), title: n.title || n.slug, attr: "note", slug: n.slug };
   }
+  const es = state.events;
+  for (i = 0; i < es.length; i++) {
+    const v = es[i];
+    if (String(v.slug).toLowerCase() === key || String(v.title || "").toLowerCase() === key)
+      return { href: "/" + ATLAS_SLUG + "#" + encodeURIComponent(v.slug), title: v.title || v.slug, attr: "event", slug: v.slug };
+  }
   return null;
 }
 
@@ -1810,7 +1874,7 @@ function wikiLinks(md) {
 
       const hit = resolveWiki(name);
       if (!hit) return `<span class="wiki-dead" title="No note named &quot;${esc(name)}&quot;">${esc(alias || body)}</span>`;
-      const anchor = heading ? "#" + encodeURIComponent(headingId(heading)) : "";
+      const anchor = heading && hit.attr !== "event" ? "#" + encodeURIComponent(headingId(heading)) : "";
       const text = alias || (heading ? hit.title + " › " + heading : hit.title);
       /* no data-* when the link carries an anchor: the in-app route would land on the
          page and drop the fragment, because the heading does not exist until the
