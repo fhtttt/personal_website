@@ -2,7 +2,7 @@
 title: Great Works That Read Me
 category: Others
 created: 2026-08-03
-updated: 2026-11-04
+updated: 2026-11-19
 summary: A running record of the books, lectures, films and TV series, poems, songs, essays and papers that read my life seriously.
 tags:
   - recommendation
@@ -86,6 +86,7 @@ tags:
 - Karl Mannheim, *Ideologie und Utopie*
 - Hannah Arendt, *The Human Condition*
 - Francis Fukuyama, *The End of History and the Last Man*
+- Guy Debord, *La Société du spectacle*
 - Edith Wharton, *The House of Mirth*
 - F. Scott Fitzgerald, *The Great Gatsby*
 
