@@ -622,6 +622,14 @@ body.atlas .post-meta { margin-bottom: 28px; }
 }
 .at-detail:empty { display: none; }
 .at-detail.open { margin-top: 18px; }
+/* sticky at the panel's bottom edge, and a mask would not do: it would make the sheet see-through */
+.at-detail.more::after {
+  content: ""; display: block;
+  position: -webkit-sticky; position: sticky; bottom: 0;
+  height: 44px; margin-top: -44px;
+  background: linear-gradient(to bottom, transparent, var(--bg));
+  pointer-events: none;
+}
 .at-rest { margin: 0; font-size: 13.5px; color: var(--muted); }
 .at-rest.hint { margin-top: 2px; }
 .ev-head { display: flex; align-items: flex-start; }
@@ -684,11 +692,13 @@ body.atlas .post-meta { margin-bottom: 28px; }
   .at-detail.open {
     position: fixed; z-index: 7; left: 0; right: 0; bottom: 0;
     height: 46vh; margin: 0;
-    padding: 14px var(--side) 22px;
+    padding: 14px var(--side) 0;
     background: var(--bg);
     border-top: 1px solid var(--tick);
     box-shadow: 0 -8px 24px rgba(0, 0, 0, .08);
   }
+  /* the air at the end belongs to the prose: padding on the sheet would hold the fade above its bottom edge */
+  .at-detail.open .ev-body { padding-bottom: 22px; }
   body.atlas.ev-open #app { padding-bottom: calc(46vh + 72px); }
 }
 /* the only way to close the sheet on a phone, where there is no Esc */

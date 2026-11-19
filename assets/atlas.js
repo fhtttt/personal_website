@@ -262,6 +262,7 @@
       paint();
     });
     A.detail.addEventListener("click", onDetailClick);
+    A.detail.addEventListener("scroll", paintMore, { passive: true });
     setView(WORLD);
     renderCaption();
     paint();
@@ -672,7 +673,7 @@
     A.target = WORLD;
     document.body.classList.remove("ev-open");
     A.side.classList.remove("open");
-    A.detail.classList.remove("open");
+    A.detail.classList.remove("open", "more");
     A.detail.innerHTML = "";
     paint();
     flyTo(WORLD);
@@ -727,9 +728,21 @@
       ${e.summary ? `<p class="ev-sum">${isolateRtl(esc(e.summary))}</p>` : ""}
       <div class="prose ev-body"></div>`;
     A.detail.scrollTop = 0;
+    paintMore();
     const body = A.detail.querySelector(".ev-body");
     const at = e.slug;
-    loadBody(e).then(html => { if (alive() && A.sel === at && body.isConnected) body.innerHTML = html; });
+    loadBody(e).then(html => {
+      if (!alive() || A.sel !== at || !body.isConnected) return;
+      body.innerHTML = html;
+      paintMore();
+    });
+  }
+
+  /* The panel scrolls inside itself, and a Mac shows no scrollbar until something moves. Cut off
+     between two paragraphs the text looks finished, so its last lines fade while more is below. */
+  function paintMore() {
+    const d = A.detail;
+    d.classList.toggle("more", d.scrollHeight - d.scrollTop - d.clientHeight > 2);
   }
 
   async function loadBody(e) {
@@ -1081,6 +1094,7 @@
       A.drawn = null;
       paintMap();
       setView(A.view);
+      paintMore();
     };
     window.addEventListener("resize", () => {
       if (!alive()) return;

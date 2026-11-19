@@ -363,6 +363,9 @@ the date line (see `WORLD-HISTORY.md`): rings stitched across it draw a line acr
   with its tick; clamped, it sat pinned beside the wrong years.
 - **No `overscroll-behavior` on `.at-detail`.** Chrome applies it even to a panel with nothing to
   scroll, and the wheel over the details simply stopped working.
+- `paintMore()` fades the panel's last lines while more is below. A Mac shows no scrollbar until
+  something moves, so text cut off between two paragraphs looked finished, and an event's last
+  sentence looked missing.
 
 **Below 960px the visible axis is a band**, between the map riding at the top and the sheet at
 the bottom, and `band()` is what everything that places or reveals something asks. The caption
